@@ -1,0 +1,6 @@
+# Name file: .gitingnore
+
+build/
+*.o
+*.out
+*.md
