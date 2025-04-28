@@ -5,3 +5,6 @@ build/
 *.out
 *.md
 tags
+*.swp
+*.swo
+*.swn

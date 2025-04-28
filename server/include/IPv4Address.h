@@ -1,6 +1,10 @@
 // server/include/IPv4Address.h
 #ifndef
 #define IPV4ADDRESS_H 
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 // Класс для работы с адресацией IPv4
 class IPv4Address
 {
