@@ -11,7 +11,8 @@ class TCPServer
     IPv4Address address;
     vector<Client> clients;
 public:
-    TCPServer(uint16_t port) : address(port), socket();
+    TCPServer(uint16_t port) : address(port);
+    TCPServer(uint16_t port, const char *ip) : address(port, ip);
     void Start();
     void Stop();
 };
