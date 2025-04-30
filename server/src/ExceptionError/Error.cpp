@@ -11,7 +11,7 @@ Error::Error(const char* err_msg, int code)
     error_message = strdup(err_msg);
 }
 
-Errar::Error(const Error& other)
+Error::Error(const Error& other)
 {
     error_code = other.error_code;
     error_message = strdup(other.error_message);
@@ -20,9 +20,10 @@ Error::~Error()
 {
     delete[] error_message;
 }
+
 static char* Error::strdup(const char *str)
 {
-    char *res = new char[strlen(str)];
+    char *res = new char[strlen(str) + 1];
     strcpy(res, str);
     return res;
 }
@@ -39,6 +40,6 @@ IncorrectedInputUser::IncorrectedInputUser(const IncorrectedInputUser& other)
 
 IncorrectedInputUser::~IncorrectedInputUser()
 {
-    delete user_entered_data;
+    delete[] user_entered_data;
 }
 

@@ -1,4 +1,5 @@
 // server/include/ExceptionError/UserError/UserError.h
+
 #ifndef USERERROR_H
 #define USERERROR_H
 
