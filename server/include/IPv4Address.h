@@ -1,5 +1,5 @@
 // server/include/IPv4Address.h
-#ifndef
+#ifndef IPV4ADDRESS_H
 #define IPV4ADDRESS_H 
 
 #include <sys/socket.h>
@@ -11,11 +11,12 @@ class IPv4Address
 protected:
     struct sockaddr_in address;
 public:
+    IPv4Address();
     IPv4Address(uint16_t port, const char *ip = NULL);
-    ~IPv4Address();
     
-    const sockaddr* getAddr() const;
-    socklen_t getAdddrLen() const;
+    const struct sockaddr* GetAddr() const { return (const struct sockaddr *)&address; }
+    socklen_t GetAddrLen() const { return sizeof(address); }
+    void SetIPv4Address(uint16_t port, const char *ip);
 };
 
 #endif //IPV4ADDRESS_H

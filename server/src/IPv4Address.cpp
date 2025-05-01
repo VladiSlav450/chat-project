@@ -1,0 +1,32 @@
+// server/src/IPv4Adderss.cpp
+
+#include "../include/IPv4Address.h"
+#include <arpa/inet.h>
+#include <string.h>
+
+IPv4Address::IPv4Address()
+{
+    memset(&address, 0, sizeof(address));
+    address.sin_family = AF_INET; 
+}
+
+IPv4Address::IPv4Address(uint16_t port, const char *ip = NULL)
+{
+    memset(&address, 0, sizeof(address));
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    if(ip == NULL)
+        address.sin_addr.s_addr = INADDR_ANY;
+    else 
+        inet_pton(AF_INET, ip, &address.sin_addr);
+}
+
+void SetIPv4Address(uint16_t port, const char *ip)
+{
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    if(ip == NULL)
+        address.sin_addr.s_addr = INADDR_ANY;
+    else 
+        inet_pton(AF_INET, ip, &address.sin_addr);
+}

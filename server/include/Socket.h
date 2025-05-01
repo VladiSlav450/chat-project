@@ -1,10 +1,11 @@
 // server/include/Socket.h
+
 #ifndef SOCKET_H
 #define SOCKET_H 
 
 #include <sys/socket.h>
 
-// Виртуальный класс который от которого наследуются сокет на TCP или сокет на  UDP 
+// Общий базовый класс сокетов 
 
 class Socket
 {
@@ -14,10 +15,8 @@ public:
     Socket(int domain, int type, int protocol);
     virtual ~Socket();
 
-    virtual void Bind(const struct sockaddr* addr, socklen_t addrlen) = 0;
-    virtual void Listen(int backlog) = 0;
-    // Другие общие методы ,,,
+    void GetSocket() const { return socket_fd; }
+    void Close();
 };
-
 
 #endif // SOCKET_H

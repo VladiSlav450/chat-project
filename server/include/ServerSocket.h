@@ -1,18 +1,23 @@
 // server/include/ServerSocket.h
+
 #ifndef SERVERSOCKET_H
 #define SERVERSOCKET_H
 
-#include "Socket.h"
+#include "TCPSocket.h"
 #include "IPv4Address.h"
+#include "Session.h"
+#include <vector>
 
 class TCPServer
 {
     TCPSocket socket;
     IPv4Address address;
-    vector<Client> clients;
+    vector<Session *> sessions;
 public:
-    TCPServer(uint16_t port) : address(port);
-    TCPServer(uint16_t port, const char *ip) : address(port, ip);
+    TCPServer(uint16_t port);
+    TCPServer(uint16_t port, const char *ip);
+    ~TCPServer();
+    
     void Start();
     void Stop();
 };

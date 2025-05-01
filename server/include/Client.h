@@ -1,5 +1,10 @@
-#ifndef
+// server/include/Client.h
+
+#ifndef CLIENT_H
 #define CLIENT_H 
+
+#include <string>
+#include <sys/socket.h>
 
 class Client
 {
@@ -10,11 +15,11 @@ public:
     Client(int fd, struct sockaddr_in addr);
     ~Client();
 
-    void disconnected();
-    bool sendData(const char* data);
-    char *recevData();
-
-    bool isConnected() const { return is_connected; }
-    int getSocket() const { return socket_fd; }
+    std::string ReceiveData();
+    bool SendData(const std::string& data);
+    void Disconnect();
+    bool IsConnected() const { return is_connected; }
+    int GetSocket() const { return socket_fd; }
 };
+
 #endif // CLIENT_H
