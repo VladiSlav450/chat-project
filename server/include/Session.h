@@ -4,6 +4,7 @@
 #define SESSION_H
 
 #include "Client.h"
+#include <vector>
 
 class Session
 {
@@ -14,7 +15,7 @@ public:
     ~Session();
 
     void Run();
-}
+};
 
 #endif // SESSION_H
 

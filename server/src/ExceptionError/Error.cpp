@@ -21,7 +21,7 @@ Error::~Error()
     delete[] error_message;
 }
 
-static char* Error::strdup(const char *str)
+char* Error::strdup(const char *str)
 {
     char *res = new char[strlen(str) + 1];
     strcpy(res, str);
@@ -33,7 +33,7 @@ IncorrectedInputUser::IncorrectedInputUser(const char* msg, const char* input_da
     user_entered_data = strdup(input_data);
 }
 
-IncorrectedInputUser::IncorrectedInputUser(const IncorrectedInputUser& other)
+IncorrectedInputUser::IncorrectedInputUser(const IncorrectedInputUser& other) : UserError(other.GetMessage(), GetErrorCode())
 {
     user_entered_data = strdup(other.user_entered_data);
 }

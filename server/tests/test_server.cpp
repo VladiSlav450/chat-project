@@ -1,6 +1,8 @@
 // /server/tests/test_server.cpp
+
 #include <check.h>
-#include "../incude/TCPSocket.h"
+#include <arpa/inet.h>
+#include "../include/TCPSocket.h"
 #include "../include/IPv4Address.h"
 #include "../include/ServerSocket.h"
 #include "mocks.h"
@@ -11,8 +13,8 @@
 START_TEST(test_ipv4_address_creation)
 {
     IPv4Address addr(8080);
-    ck_assert_ptr_ne(addr.getAddr());
-    ck_assert_int_eq(addr.getAddrLen(), sizeof(struct sockaddr_in));
+    ck_assert_ptr_ne(addr.GetAddr());
+    ck_assert_int_eq(addr.GetAddrLen(), sizeof(struct sockaddr_in));
 }
 END_TEST
 
@@ -20,7 +22,7 @@ END_TEST
 START_TEST(test_ipv4_custom_ip)
 {
     IPv4Address addr(8080, "127.0.0.1");
-    const sockaddr_in *sa = (const sockaddr_in *)addr.getAddr();
+    const sockaddr_in *sa = (const sockaddr_in *)addr.GetAddr();
     ck_assert_str_eq(inet_ntoa(sa->sin_addr), "127.0.0.1");
 }
 END_TEST
@@ -30,16 +32,17 @@ START_TEST(test_ipv4_address_boundary_ports)
 {
     IPv4Address addr_min(0);
     IPv4Address addr_max(65535);
-    ck_assert_ptr_ne(addr_min.getAddr());
-    ck_assert_ptr_ne(addr_max.getAddr());
+    ck_assert_ptr_ne(addr_min.getAddr(), NULL);
+    ck_assert_ptr_ne(addr_max.getAddr(), NULL);
 }
 END_TEST
 
 // Test 1.4: test ipv4 invalid IP address
 START_TEST(test_ipv4_invalid_ip)
 {
-    IPv4Address addr_very;
+    IPv4Address addr_very(8080, ";
     IPv4Address addr_char;
+
     int resul = addr_very_sumbol.init(8080, "256.256.256.256");
     ck_assert_ptr_eq(result, -1);
     int resul = addr_char(8080, "asdfgasdfasdf");

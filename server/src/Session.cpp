@@ -2,7 +2,7 @@
 
 #include "../include/Session.h"
 #include <iostream>
-#include <tgread>
+#include <thread>
 
 Session::Session(Client *c1, Client *c2) : client1(c1), client2(c2) {}
 
@@ -14,7 +14,7 @@ Session::~Session()
  
 void Session::Run()
 {
-    std::thead([&]() {
+    std::thread([&]() {
         while(client1->IsConnected() && client2->IsConnected())
         {
             std::string msg = client1->ReceiveData();
@@ -26,7 +26,7 @@ void Session::Run()
                 break;
             client2->SendData(msg);
         } 
-        client1.Disconnect();
-        client2.Disconnect();
-    }), detach();
+        client1->Disconnect();
+        client2->Disconnect();
+    }).detach();
 } 

@@ -15,7 +15,7 @@ public:
     Socket(int domain, int type, int protocol);
     virtual ~Socket();
 
-    void GetSocket() const { return socket_fd; }
+    int GetSocket() const { return socket_fd; }
     void Close();
 };
 

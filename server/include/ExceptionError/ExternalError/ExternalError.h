@@ -3,6 +3,7 @@
 #define EXTERNALERROR_H
 
 #include "../Error.h"
+#include <cerrno>
 
 class ExternalError : public Error
 {

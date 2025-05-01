@@ -4,6 +4,8 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <cstdint>
+#include <cstddef>
 
 // Класс для работы с адресацией IPv4
 class IPv4Address

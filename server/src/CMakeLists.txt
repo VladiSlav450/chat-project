@@ -1,6 +1,9 @@
 # server/src/CMakeLists.txt
 
-file(GLOB SOURCE *.cpp)
+file(GLOB SOURCE 
+    *.cpp
+    ExceptionError/Error.cpp
+)
 
 add_executable(chat_server ${SOURCE})
 

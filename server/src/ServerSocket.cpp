@@ -15,7 +15,7 @@ TCPServer::~TCPServer()
 
 void TCPServer::Start()
 {
-    socket.Bind(address.GetAddr(), address.GetAddrlen());
+    socket.Bind(address.GetAddr(), address.GetAddrLen());
     socket.Listen(5);
 
     std::cout << "Server started..." << std::endl;
@@ -25,7 +25,7 @@ void TCPServer::Start()
         struct sockaddr_in client1_addr, client2_addr;
         socklen_t len = sizeof(client1_addr);
 
-        int fd1 = socket.Accept((struct sockadrr *)&client1_addr, &len);
+        int fd1 = socket.Accept((struct sockaddr *)&client1_addr, &len);
         std::cout << "Client 1 connected!" << std::endl;
 
         int fd2 = socket.Accept((struct sockaddr *)&client2_addr, &len);
@@ -40,12 +40,10 @@ void TCPServer::Start()
     }
 }
 
-void TCPServer::Stop
+void TCPServer::Stop()
 {
-    for(std::vector<Session *>::iterator it = session.begin(); it != session.end(); ++it)
+    for(std::vector<Session *>::iterator it = sessions.begin(); it != sessions.end(); ++it)
     {
         delete *it;
-        session.clear();
-        session.Close();
     }
 }

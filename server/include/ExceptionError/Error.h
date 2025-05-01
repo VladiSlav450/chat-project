@@ -17,7 +17,6 @@ public:
     // Return the error code and error message
     int GetErrorCode() const { return error_code; } 
     const char *GetMessage() const { return error_message; } 
-private:
     // strdup: the function for copying the strings 
     static char *strdup(const char *str);
 };

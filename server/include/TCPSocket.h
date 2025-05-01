@@ -11,8 +11,8 @@ public:
     TCPSocket(int domain = AF_INET, int type = SOCK_STREAM, int protocol = 0);
 
     void Bind(const struct sockaddr *addr, socklen_t addrlen);
-    void Listen(int backlog)
-    int Accept(struct sockaddr *addr, socklen_t addrlen);
+    void Listen(int backlog);
+    int Accept(struct sockaddr *addr, socklen_t *addrlen);
 };
 
 #endif // TCPSOCKET_H

@@ -10,10 +10,10 @@ int main()
         server.Start();
              
     } 
-    cath (Error& error)
+    catch (Error& error)
     {
         std::cout << "Code error: " << error.GetErrorCode() << " Message: " << error.GetMessage() << std::endl;
     }
 
-    return 0
+    return 0;
 }

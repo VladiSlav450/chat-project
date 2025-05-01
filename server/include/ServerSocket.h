@@ -12,7 +12,7 @@ class TCPServer
 {
     TCPSocket socket;
     IPv4Address address;
-    vector<Session *> sessions;
+    std::vector<Session *> sessions;
 public:
     TCPServer(uint16_t port);
     TCPServer(uint16_t port, const char *ip);

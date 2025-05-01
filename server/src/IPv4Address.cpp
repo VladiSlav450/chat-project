@@ -10,7 +10,7 @@ IPv4Address::IPv4Address()
     address.sin_family = AF_INET; 
 }
 
-IPv4Address::IPv4Address(uint16_t port, const char *ip = NULL)
+IPv4Address::IPv4Address(uint16_t port, const char *ip)
 {
     memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
@@ -21,12 +21,12 @@ IPv4Address::IPv4Address(uint16_t port, const char *ip = NULL)
         inet_pton(AF_INET, ip, &address.sin_addr);
 }
 
-void SetIPv4Address(uint16_t port, const char *ip)
+void IPv4Address::SetIPv4Address(uint16_t port, const char *ip)
 {
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
+    this->address.sin_family = AF_INET;
+    this->address.sin_port = htons(port);
     if(ip == NULL)
-        address.sin_addr.s_addr = INADDR_ANY;
+        this->address.sin_addr.s_addr = INADDR_ANY;
     else 
-        inet_pton(AF_INET, ip, &address.sin_addr);
+        inet_pton(AF_INET, ip, &this->address.sin_addr);
 }
