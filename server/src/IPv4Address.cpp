@@ -21,8 +21,12 @@ IPv4Address::IPv4Address(uint16_t port, const char *ip)
         inet_pton(AF_INET, ip, &address.sin_addr);
 }
 
-void IPv4Address::SetIPv4Address(uint16_t port, const char *ip)
+int IPv4Address::SetIPv4Address(uint16_t port, const char *ip)
 {
+    struct in_addr ip_value;
+    if(!inet_aton(ip, &ip_valur))
+        return -1;
+
     this->address.sin_family = AF_INET;
     this->address.sin_port = htons(port);
     if(ip == NULL)

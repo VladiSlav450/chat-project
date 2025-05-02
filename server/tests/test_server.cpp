@@ -10,43 +10,84 @@
 // TEST: class IPv4Address.
 //
 // Test 1.1: ipv4 address create
-START_TEST(test_ipv4_address_creation)
+START_TEST(test_default_constructor_sets_address)
 {
-    IPv4Address addr(8080);
-    ck_assert_ptr_ne(addr.GetAddr());
+    IPv4Address addr;
+
+    ck_assert_ptr_ne(addr.GetAddr(), NULL);
     ck_assert_int_eq(addr.GetAddrLen(), sizeof(struct sockaddr_in));
 }
 END_TEST
 
 // Test 1.2: test custom ip
-START_TEST(test_ipv4_custom_ip)
+START_TEST(test_constructor_with_port_sets_correct_port)
 {
-    IPv4Address addr(8080, "127.0.0.1");
+    IPv4Address addr(8080);
     const sockaddr_in *sa = (const sockaddr_in *)addr.GetAddr();
-    ck_assert_str_eq(inet_ntoa(sa->sin_addr), "127.0.0.1");
+
+    ck_assert_int_eq(ntohs(sa->sin_port), 8080);
+    ck_assert_int_eq(sa->sin_addr.s_addr, INADDR_ANY);
 }
 END_TEST
  
-// Test 1.3: test ipv4 on min and max port
-START_TEST(test_ipv4_address_boundary_ports)
+// Test 1.3 
+START_TEST(test_constructor_with_ip_sets_correct_ip)
 {
-    IPv4Address addr_min(0);
-    IPv4Address addr_max(65535);
-    ck_assert_ptr_ne(addr_min.getAddr(), NULL);
-    ck_assert_ptr_ne(addr_max.getAddr(), NULL);
+    IPv4Address addr(8080, "127.0.0.1");
+    const struct sockaddr_in *sa = (const struct sockaddr_in *)addr.GetAddr();
+
+    ck_assert_int_eq(ntohs(sa->sin_port), 8080);
+    ck_assert_str_eq(inet_ntoa(sa->sin_addr), "127.0.0.1");
 }
 END_TEST
 
-// Test 1.4: test ipv4 invalid IP address
-START_TEST(test_ipv4_invalid_ip)
+// Test 1.4 
+START_TEST(test_set_ipv4_address_changes_values)
 {
-    IPv4Address addr_very(8080, ";
-    IPv4Address addr_char;
+    IPv4Address addr(0, "192.168.0.1");
+    addr.SetIPv4Address(3000, "8.8.8.8");
+    const struct sockaddr_in *sa = (const strucst sockaddr_in *)addr.GetAddr();
 
-    int resul = addr_very_sumbol.init(8080, "256.256.256.256");
-    ck_assert_ptr_eq(result, -1);
-    int resul = addr_char(8080, "asdfgasdfasdf");
-    ck_assert_ptr_eq(result, -1);
+    ck_assert_int_eq(ntohs(sa->sin_port), 300);
+    ck_assert_str_eq(inet_ntoa(sa->sin_addr), "8.8.8.8"); 
+}
+END_TEST
+
+// Test 1.6
+START_TEST(test_set_invalid_ip_returns_error)
+{
+    IPv4Address addr;
+    int result;
+
+    result = addr.SetIPv4Address(8080, "256.256.256.256");
+    ck_assert_int_lt(result, 0);
+    result = addr.SetIPv4Address(8080, "invalid.ip address");
+    ck_assert_int_lt(result, 0);
+}
+END_TEST
+
+// Test 1.7
+START_TEST(test_min_and_max_port_are_valid)
+{
+    IPv4Address addr_min(0);
+    IPv4Address addr_max(65535);
+
+    const struct sockaddr_in *am1 = (const struct sockaddr_in *)addr_min.GetAddr();
+    const struct sockaddr_in *am2 = (const struct sockaddr_in *)addr_max.GetAddr();
+
+    ck_assert_int_eq(ntohs(am1->sin_port), 0);
+    ck_assert_int_eq(ntohs(am2->sin_port), 65535);
+}
+END_TEST
+
+// Test 1.5: test ipv4 zero port
+START_TEST(test_setting_zero_port_is_allowed)
+{
+    IPv4Address addr;
+    addr.SetIPv4Address(0, "127.0.0.1");
+
+    const struct sockaddr_in *sa = (const struct sockaddr_in *)addr.GetAddr();
+    ck_assert_int_eq(ntohs(sa->sin_port), 0);
 }
 END_TEST
 

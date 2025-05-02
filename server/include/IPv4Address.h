@@ -18,7 +18,7 @@ public:
     
     const struct sockaddr* GetAddr() const { return (const struct sockaddr *)&address; }
     socklen_t GetAddrLen() const { return sizeof(address); }
-    void SetIPv4Address(uint16_t port, const char *ip);
+    int SetIPv4Address(uint16_t port, const char *ip);
 };
 
 #endif //IPV4ADDRESS_H
