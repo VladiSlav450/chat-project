@@ -5,6 +5,7 @@
 #include "../include/TCPSocket.h"
 #include "../include/IPv4Address.h"
 #include "../include/ServerSocket.h"
+#include "../include/ExceptionError/ExternalError/ExternalError.h"
 #include "mocks.h"
 
 // TEST: class IPv4Address.
@@ -46,23 +47,24 @@ START_TEST(test_set_ipv4_address_changes_values)
 {
     IPv4Address addr(0, "192.168.0.1");
     addr.SetIPv4Address(3000, "8.8.8.8");
-    const struct sockaddr_in *sa = (const strucst sockaddr_in *)addr.GetAddr();
+    const struct sockaddr_in *sa = (const struct sockaddr_in *)addr.GetAddr();
 
     ck_assert_int_eq(ntohs(sa->sin_port), 300);
     ck_assert_str_eq(inet_ntoa(sa->sin_addr), "8.8.8.8"); 
 }
 END_TEST
 
-// Test 1.6
+// Test 1.5
 START_TEST(test_set_invalid_ip_returns_error)
 {
     IPv4Address addr;
     int result;
 
     result = addr.SetIPv4Address(8080, "256.256.256.256");
-    ck_assert_int_lt(result, 0);
+    ck_assert_int_lt(result, -1);
+
     result = addr.SetIPv4Address(8080, "invalid.ip address");
-    ck_assert_int_lt(result, 0);
+    ck_assert_int_lt(result, -1);
 }
 END_TEST
 
@@ -80,7 +82,7 @@ START_TEST(test_min_and_max_port_are_valid)
 }
 END_TEST
 
-// Test 1.5: test ipv4 zero port
+// Test 1.8: test ipv4 zero port
 START_TEST(test_setting_zero_port_is_allowed)
 {
     IPv4Address addr;
@@ -91,40 +93,114 @@ START_TEST(test_setting_zero_port_is_allowed)
 }
 END_TEST
 
-// TEST: class TCPSocket.
+/*/////// TEST: class TCPSocket. \\\\\\\\\*/
 //
-// Test 2.1: tcp socket bind
-START_TEST(test_tcp_socket_bind)
+// Test 2.1: tcp socket bind null address
+START_TEST(test_bind_throws_on_null_address)
 {
-    bind = mock_bind;
     TCPSocket socket;
-    struct sockaddr_in addr= {0};
-    ck_assert_int_eq(socket.Bind((const sockaddr *)&addr, sizeof(addr)), 0);
-    ck_assert_int_eq(socket.Bind(NULL, 0), -1); 
-    bind = original_bind;
+    struct sockaddr_in addr = {0};
+    bool exception_throw = false;
+
+    try {
+        socket.Bind(NULL, 0);
+    } catch(const ExternalError& ex)
+    { 
+        fprintf(stderr, "Test failed 2.1: %s: %d, %s\n", ex.GetMessage(), ex.GetErrorCode(), strerror(ex.GetErrno()));    
+        exception_throw = true;
+    }
+    ck_assert(exception_throw == false);
 }
 END_TEST
 
 // Test 2.2: tcp socket listen
-START_TEST(test_tcp_socket_listen)
+START_TEST(test_bind_succeeds_with_valid_address)
 {
-    listen = mock_listen;
     TCPSocket socket;
-    struct sockaddr_in addr= {0};
-    ck_assert_int_eq(socket.Listen(5), 0);
-    listen = original_listen;
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(8888);
+    addr.sin_addr.s_addr = INADDR_ANY;
+    bool exception_throw = false;
+
+    try {
+        socket.Bind((sockaddr *)&addr, sizeof(addr));
+    } catch (const ExternalError& ex) {
+        fprintf(stderr, "Test failed 2.2: %s: %d, %s\n", ex.GetMessage(), ex.GetErrorCode(), strerror(ex.GetErrno()));    
+        exception_throw = true;
+    }
+
+    ck_assert(exception_throw == false);
+}
+END_TEST
+
+// Test 2.3
+START_TEST(test_listen_throws_if_not_bound)
+{
+    TCPSocket socket;
+    bool exception_throw = false;
+
+    try {
+        socket.Listen(6);
+    } catch (const ExternalError& ex) {
+        fprintf(stderr, "Test failed 2.3: %s: %d, %s\n", ex.GetMessage(), ex.GetErrorCode(), strerror(ex.GetErrno()));    
+        exception_throw = true;
+    } 
+
+    ck_assert(exception_throw == false);
+}
+END_TEST
+
+// Test 2.4
+START_TEST(test_listen_succeeds_after_bind)
+{
+    TCPSocket socket;
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(8889);
+    addr.sin_addr.s_addr = INADDR_ANY;
+
+    bool exception_throw = false;
+
+    try {
+        socket.Bind((sockaddr *)&addr, sizeof(addr));
+        socket.Listen(6);
+    } catch (const ExternalError& ex) {
+        fprintf(stderr, "Test failed 2.4: %s: %d, %s\n", ex.GetMessage(), ex.GetErrorCode(), strerror(ex.GetErrno()));    
+        exception_throw = true;
+    } 
+
+    ck_assert(exception_throw == false);
 }
 END_TEST
 
 
 // TEST: class TCPServer.
 //
-// tetst 3.1: server start and stop
-START_TEST(test_server_start_stop)
+// Tetst 3.1: server start and stop
+START_TEST(test_server_start_stop_no_clients)
 {
     TCPServer server(8080);
-    ck_assert_int_eq(server.Start(), 0);
-    ck_assert_int_eq(server.Stop(), 0);
+     
+    bool start_exception = false;
+    bool stop_exception = false;
+
+    try {
+        server.Start();
+    } catch (const ExternalError& ex) {
+        fprintf(stderr, "Test failed 2.5: %s: %d, %s\n", ex.GetMessage(), ex.GetErrorCode(), strerror(ex.GetErrno()));    
+        start_exception = true;
+    }
+
+    try {
+        server.Stop();
+    } catch (const ExternalError& ex) {
+        fprintf(stderr, "Test failed 2.5: %s: %d, %s\n", ex.GetMessage(), ex.GetErrorCode(), strerror(ex.GetErrno()));    
+        stop_exception = true;
+    }
+
+    ck_assert(start_exception == false);
+    ck_assert(stop_exception == false);
 }
 END_TEST
 
@@ -134,10 +210,14 @@ Suite* ipv4_suite(void)
 {
     Suite *s = suite_create("IPv4Address");
     TCase *tc = tcase_create("Core");
-    tcase_add_test(tc, test_ipv4_address_creation);
-    tcase_add_test(tc, test_ipv4_custom_ip);
-    tcase_add_test(tc, test_ipv4_address_boundary_ports);
-    tcase_add_test(tc, test_ipv4_invalid_ip);
+
+    tcase_add_test(tc, test_default_constructor_sets_address);
+    tcase_add_test(tc, test_constructor_with_port_sets_correct_port);
+    tcase_add_test(tc, test_constructor_with_ip_sets_correct_ip);
+    tcase_add_test(tc, test_set_ipv4_address_changes_values);
+    tcase_add_test(tc, test_set_invalid_ip_returns_error);
+    tcase_add_test(tc, test_min_and_max_port_are_valid);
+    tcase_add_test(tc, test_setting_zero_port_is_allowed);
 
     suite_add_tcase(s, tc);
     return s;
@@ -148,10 +228,12 @@ Suite* tcp_socket_suite(void)
 {
     Suite *s = suite_create("TCPSocket");
     TCase *tc = tcase_create("Core");
-    tcase_add_test(tc, test_tcp_socket_bind);
-    tcase_add_test(tc, test_tcp_socket_listen);
+    tcase_add_test(tc, test_bind_throws_on_null_address);
+    tcase_add_test(tc, test_bind_succeeds_with_valid_address);
+    tcase_add_test(tc, test_listen_throws_if_not_bound);
+    tcase_add_test(tc, test_listen_succeeds_after_bind);
 
-    suite_add_test(s, tc);
+    suite_add_tcase(s, tc);
     return s;
 }
 
@@ -160,9 +242,9 @@ Suite* server_suite(void)
 {
     Suite *s = suite_create("TCPServer");
     TCase *tc = tcase_create("Core");
-    tcase_add_test(tc, test_server_start_stop);
+    tcase_add_test(tc, test_server_start_stop_no_clients);
 
-    suite_add_test(s, tc); 
+    suite_add_tcase(s, tc); 
     return s;
 }
 

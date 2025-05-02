@@ -24,7 +24,7 @@ IPv4Address::IPv4Address(uint16_t port, const char *ip)
 int IPv4Address::SetIPv4Address(uint16_t port, const char *ip)
 {
     struct in_addr ip_value;
-    if(!inet_aton(ip, &ip_valur))
+    if(inet_aton(ip, &ip_value) <= 0 && ip != NULL)
         return -1;
 
     this->address.sin_family = AF_INET;
@@ -32,5 +32,6 @@ int IPv4Address::SetIPv4Address(uint16_t port, const char *ip)
     if(ip == NULL)
         this->address.sin_addr.s_addr = INADDR_ANY;
     else 
-        inet_pton(AF_INET, ip, &this->address.sin_addr);
+        this->address.sin_addr = ip_value;
+    return 0;
 }
