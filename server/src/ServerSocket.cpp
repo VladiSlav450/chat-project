@@ -22,21 +22,7 @@ void TCPServer::Start()
 
     while(true)
     {
-        struct sockaddr_in client1_addr, client2_addr;
-        socklen_t len = sizeof(client1_addr);
 
-        int fd1 = socket.Accept((struct sockaddr *)&client1_addr, &len);
-        std::cout << "Client 1 connected!" << std::endl;
-
-        int fd2 = socket.Accept((struct sockaddr *)&client2_addr, &len);
-        std::cout << "Client 2 connected!" << std::endl;
-
-        Client *c1 = new Client(fd1, client1_addr);
-        Client *c2 = new Client(fd2, client2_addr);
-        
-        Session *session = new Session(c1, c2);
-        sessions.push_back(session);
-        session->Run(); 
     }
 }
 

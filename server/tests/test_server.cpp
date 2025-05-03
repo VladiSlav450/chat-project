@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
-
 #include "../include/TCPSocket.h"
 #include "../include/IPv4Address.h"
 #include "../include/ServerSocket.h"
@@ -187,11 +186,11 @@ END_TEST
 // Tetst 3.1: server start and stop
 START_TEST(test_server_start_stop_no_clients)
 {
-    TCPServer server(8080);
     pid_t pid = fork();
 
     if(pid == 0)
     {
+        TCPServer server(8080);
         server.Start();
         exit(EXIT_SUCCESS);
     }
@@ -203,13 +202,16 @@ START_TEST(test_server_start_stop_no_clients)
         addr.sin_family = AF_INET;
         addr.sin_port = htons(8080);
         inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+        
         int connect_result = connect(client_fd, (struct sockaddr *)&addr, sizeof(addr));
-
         close(client_fd);
-        kill(pid, SIGTERM);
-        wait(NULL);
 
-        ck_assert_int_ge(connect_result, 0);
+        kill(pid, SIGTERM);
+        int status;
+        wait(&status);
+
+        ck_assert_int_eq(connect_result, 0);
+        ck_assert(WIFEXITED(status));
     }
     else
     {

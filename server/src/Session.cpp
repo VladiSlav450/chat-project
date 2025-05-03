@@ -14,19 +14,5 @@ Session::~Session()
  
 void Session::Run()
 {
-    std::thread([&]() {
-        while(client1->IsConnected() && client2->IsConnected())
-        {
-            std::string msg = client1->ReceiveData();
-            if(msg.empty())
-                break;
-            std::cout << "Client1: " << msg << std::endl;
 
-            if(msg == "exit\n")
-                break;
-            client2->SendData(msg);
-        } 
-        client1->Disconnect();
-        client2->Disconnect();
-    }).detach();
 } 
