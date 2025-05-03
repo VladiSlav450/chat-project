@@ -1,4 +1,5 @@
 // server/include/ExceptionError/ExternalError/ExternalError.h
+
 #ifndef EXTERNALERROR_H
 #define EXTERNALERROR_H
 

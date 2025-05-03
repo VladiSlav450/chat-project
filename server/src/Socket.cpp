@@ -19,5 +19,8 @@ Socket::~Socket()
 void Socket::Close()
 {
     if(socket_fd >= 0)
+    {
         ::close(socket_fd);
+        socket_fd = -1;
+    }
 }

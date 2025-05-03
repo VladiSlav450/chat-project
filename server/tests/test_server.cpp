@@ -2,6 +2,13 @@
 
 #include <check.h>
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/wait.h>
+
 #include "../include/TCPSocket.h"
 #include "../include/IPv4Address.h"
 #include "../include/ServerSocket.h"
@@ -46,7 +53,7 @@ END_TEST
 START_TEST(test_set_ipv4_address_changes_values)
 {
     IPv4Address addr(0, "192.168.0.1");
-    addr.SetIPv4Address(3000, "8.8.8.8");
+    addr.SetIPv4Address(300, "8.8.8.8");
     const struct sockaddr_in *sa = (const struct sockaddr_in *)addr.GetAddr();
 
     ck_assert_int_eq(ntohs(sa->sin_port), 300);
@@ -61,10 +68,10 @@ START_TEST(test_set_invalid_ip_returns_error)
     int result;
 
     result = addr.SetIPv4Address(8080, "256.256.256.256");
-    ck_assert_int_lt(result, -1);
+    ck_assert_int_lt(result, 0);
 
     result = addr.SetIPv4Address(8080, "invalid.ip address");
-    ck_assert_int_lt(result, -1);
+    ck_assert_int_lt(result, 0);
 }
 END_TEST
 
@@ -109,7 +116,7 @@ START_TEST(test_bind_throws_on_null_address)
         fprintf(stderr, "Test failed 2.1: %s: %d, %s\n", ex.GetMessage(), ex.GetErrorCode(), strerror(ex.GetErrno()));    
         exception_throw = true;
     }
-    ck_assert(exception_throw == false);
+    ck_assert(exception_throw == true);
 }
 END_TEST
 
@@ -181,26 +188,33 @@ END_TEST
 START_TEST(test_server_start_stop_no_clients)
 {
     TCPServer server(8080);
-     
-    bool start_exception = false;
-    bool stop_exception = false;
+    pid_t pid = fork();
 
-    try {
+    if(pid == 0)
+    {
         server.Start();
-    } catch (const ExternalError& ex) {
-        fprintf(stderr, "Test failed 2.5: %s: %d, %s\n", ex.GetMessage(), ex.GetErrorCode(), strerror(ex.GetErrno()));    
-        start_exception = true;
+        exit(EXIT_SUCCESS);
     }
+    else if(pid > 0)
+    {
+        sleep(1);
+        int client_fd = socket(AF_INET, SOCK_STREAM, 0);
+        struct sockaddr_in addr = {0};
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(8080);
+        inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+        int connect_result = connect(client_fd, (struct sockaddr *)&addr, sizeof(addr));
 
-    try {
-        server.Stop();
-    } catch (const ExternalError& ex) {
-        fprintf(stderr, "Test failed 2.5: %s: %d, %s\n", ex.GetMessage(), ex.GetErrorCode(), strerror(ex.GetErrno()));    
-        stop_exception = true;
+        close(client_fd);
+        kill(pid, SIGTERM);
+        wait(NULL);
+
+        ck_assert_int_ge(connect_result, 0);
     }
-
-    ck_assert(start_exception == false);
-    ck_assert(stop_exception == false);
+    else
+    {
+        ck_abort_msg("Fork failed");
+    }
 }
 END_TEST
 

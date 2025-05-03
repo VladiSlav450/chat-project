@@ -1,4 +1,4 @@
-// server/include/ExceptionError/Error.h
+// server/iinclude/ExceptionError/Error.h
 
 #ifndef ERROR_H
 #define ERROR_H
