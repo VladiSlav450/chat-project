@@ -1,17 +1,19 @@
+// server/include/Sockets/sockets.hpp
+
 #ifndef SOCKETS_H
 #define SOCKETS_H
 
 class FdHandler;
 
-class EventSelect
+class EventSelector
 {
     FdHandler **fd_array;
     int fd_array_len;
     int max_fd;
     bool quit_flag;
 public:
-    EventSelect() : fd_array(0), quit_flag(false) {}
-    ~EventSelect();
+    EventSelector() : fd_array(0), quit_flag(false) {}
+    ~EventSelector();
 
     void Add(FdHandler *el);
     bool Remove(FdHandler *el);

@@ -1,6 +1,7 @@
+// server/src/sockets/sockets.cpp
 
 #include <unistd.h>
-#include "../include/Sockets/Sockets.hpp"
+#include "../include/Sockets/sockets.hpp"
 
 
 FdHandler::~FdHandler()
@@ -9,13 +10,13 @@ FdHandler::~FdHandler()
         close(fd);
 }
 
-EventSelect::~EventSelect()
+EventSelector::~EventSelector()
 {
     if(fd_array)
         delete[] fd_array;
 }
 
-void EventSelect::Add(FdHandler *el)
+void EventSelector::Add(FdHandler *el)
 {
     int i;
     int fd = el->GetFd();
@@ -42,7 +43,7 @@ void EventSelect::Add(FdHandler *el)
     fd_array[fd] = el;
 }
 
-bool EventSelect::Remove(FdHendler *el)
+bool EventSelector::Remove(FdHendler *el)
 {
     int fd = el->GetFd;
     if(fd >= fd_array_len || fd_array[fd] != el)
@@ -56,7 +57,44 @@ bool EventSelect::Remove(FdHendler *el)
     return true;
 }
 
-void Run()
+void EventSelector::Run()
 {
-    
+    quit_flag = false;
+    do {
+        int i;
+        fd_set rds, wrs;
+        FD_ZERO(&res);
+        FD_ZERO(&wrs);
+        for(i = 0; i <= max_fd; i++)
+        {
+            if(fd_array[i])
+            {
+                if(fd_array[i]->WantRead())
+                    FD_SET(i, &rds);
+                if(fd_array[i]->WantWrite())
+                    FD_SET(i, &wrs);
+            }
+        }
+
+        int res = select(max_fd + 1, &rfs, &wrs, 0, 0);
+        if(res < 0)
+        {
+            if(res == EINTR)
+                continue;
+            else 
+                break;
+        }
+        if(res > 0)
+        {
+            for(i = 0; i <= max_fd; i++)
+            {
+                if(!fd_array[i])
+                    continue;
+                bool r = FD_ISSET(i, &rds);
+                bool w = FD_ISSET(i, &wrs);
+                if(r || w)
+                    fd_array[i]->Handle(r, w);
+            }
+        }
+    } while(!quit_flag);
 }
