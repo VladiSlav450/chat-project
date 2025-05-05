@@ -3,12 +3,18 @@
 #ifndef CHAT_HPP
 #define CHAT_HPP
 
-#include "../Socket/socket.hpp"
+#include "../Sockets/sockets.hpp"
+
+static const char welcom_msg[] = "Welcom to the Chat! You are known as ";
+static const char entered_msg[] = " has entered the chat";
+static const char left_msg[] = " has left the chat";
 
 enum {
     max_line_length = 1023,
     qlen_for_listen = 16
 };
+
+class ChatServer;
 
 class ChatSession : FdHandler
 {
@@ -19,13 +25,13 @@ class ChatSession : FdHandler
     char *name;
     ChatServer *the_master;
 
-    ChatSession(ChatServer *a_master, in_fd);
+    ChatSession(ChatServer *a_master, int fd);
     ~ChatSession();
 
-    void Send(const chat *msg);
+    void Send(const char *msg);
     virtual void Handle(bool re, bool we);
     void ReadAndIgnore();
-    void RadAndCheck();
+    void ReadAndCheck();
     void CheckLines();
     void ProcessLine(const char *str);
 };
@@ -33,7 +39,7 @@ class ChatSession : FdHandler
 class ChatServer : public FdHandler 
 {
     EventSelector *the_selector;
-    strucu item 
+    struct item 
     {
         ChatSession *s;
         item *next; 
@@ -47,7 +53,7 @@ public:
 
     static ChatServer *Start(EventSelector *sel, int port);
     void RemoveSession(ChatSession *s);
-    void SandAll(const char *msg, ChatSession *except = 0);
+    void SendAll(const char *msg, ChatSession *except = 0);
 
 private:
     virtual void Handle(bool re, bool we);

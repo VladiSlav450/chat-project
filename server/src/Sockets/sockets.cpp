@@ -1,7 +1,9 @@
 // server/src/sockets/sockets.cpp
 
+#include <cerrno>
+#include <sys/select.h>
 #include <unistd.h>
-#include "../include/Sockets/sockets.hpp"
+#include "../../include/Sockets/sockets.hpp"
 
 
 FdHandler::~FdHandler()
@@ -30,7 +32,7 @@ void EventSelector::Add(FdHandler *el)
     }
     if(fd_array_len <= fd)
     {
-        FdHandler **tmp = new FdHandler[fd + 1];
+        FdHandler **tmp = new FdHandler*[fd + 1];
         for(i = 0; i <= fd; i++)
             tmp[i] = i < fd_array_len ? fd_array[i] : 0;
         fd_array_len = fd + 1;
@@ -43,9 +45,9 @@ void EventSelector::Add(FdHandler *el)
     fd_array[fd] = el;
 }
 
-bool EventSelector::Remove(FdHendler *el)
+bool EventSelector::Remove(FdHandler *el)
 {
-    int fd = el->GetFd;
+    int fd = el->GetFd();
     if(fd >= fd_array_len || fd_array[fd] != el)
         return false;
     fd_array[fd] = 0;
@@ -63,7 +65,7 @@ void EventSelector::Run()
     do {
         int i;
         fd_set rds, wrs;
-        FD_ZERO(&res);
+        FD_ZERO(&rds);
         FD_ZERO(&wrs);
         for(i = 0; i <= max_fd; i++)
         {
@@ -76,10 +78,10 @@ void EventSelector::Run()
             }
         }
 
-        int res = select(max_fd + 1, &rfs, &wrs, 0, 0);
+        int res = select(max_fd + 1, &rds, &wrs, 0, 0);
         if(res < 0)
         {
-            if(res == EINTR)
+            if(errno == EINTR)
                 continue;
             else 
                 break;
