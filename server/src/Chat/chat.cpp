@@ -137,9 +137,10 @@ ChatServer *ChatServer::Start(EventSelector *sel, int port)
     int ls, opt, res;
     struct sockaddr_in addr;
 
-    ls = socket(AF_INET,SOCK_STREAM, 0);
+    ls = socket(AF_INET, SOCK_STREAM, 0);
     if(ls == -1)
         return 0;
+    
     opt = 1;
     setsockopt(ls, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
@@ -148,7 +149,7 @@ ChatServer *ChatServer::Start(EventSelector *sel, int port)
     addr.sin_port = htons(port); 
     
     res = bind(ls, (struct sockaddr *) &addr, sizeof(addr));
-    if(res < 0)
+    if(res == -1)
     {
         close(ls);
         return 0;
