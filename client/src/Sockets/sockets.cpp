@@ -1,64 +1,78 @@
 // client/src/Sockets/sockets.cpp
 
+#include <cstdio>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>  
+#include <cstring> 
+
 
 #include "../../include/Sockets/sockets.hpp"
 
-EventSelector::~EventSelector()
+static const char server_disconnected[] = "[Server dissconnected!]";
+static const char server_connected[] = "[Server connected!]";
+
+ChatClient::~ChatClient()
 {
-    if(pointer_fd)
-        delete pointer_fd;
+    if(is_connected)
+        close(sock);
 }
 
-void EventSelector::Run();
+bool ChatClient::Connected(const char *ip, int port)
 {
-    quit_flag = false;
-    while(true)
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if(sock == -1)
+        return false;
+
+    struct sockaddr_in serv_addr;
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+    serv_addr.sin_addr.s_addr = inet_addr(ip);
+
+    if(connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
     {
-        fd_set readfs, writefs;
-        FD_ZERO(&writefs);
-        FD_ZERO(&reads);
-
-        FD_SET(pointer_fd->GetFd(), &readfs);
-        FD_SET(STDIN_FILENO, &writefs);
-
-        int res = select(pointer_fd->GetFd() + 1, &reads, &writefs, 0, 0); 
-        if(res < 0)
-        {
-            if(errno == EINTR)
-                continue;
-            else 
-                break;
-        }
-        if(res > 0)
-        {
-            if(FD_ISSET(STDIN_FILEND, &writefs))
-            {
-                fgets(buffer, max_line_length, stdin);
-
-                if(buffer = "exit")
-                    break;
-                send(pointer_fd->GetFd(), buffer, strlen(buffer) + 1, 0);
-            }
-
-            if(FD_ISSET(pointer_fd->GetFd(), &readfs))
-            {
-                int rc = read(pointer_fd->GetFd(), buffer, sizeof(buffer));
-                if(rc < 1)
-                {
-                    sprintf("The server is shut down!\n");
-                    break;
-                }
-
-                sprintf(buffer, "\n");
-            }
-        }
+        close(sock);
+        return false;
     }
+
+    is_connected = true;
+    printf("%s\n", server_connected);
+
+    return is_connected;
 }
 
-FdHandler::~FdHandler()
+void ChatClient::Send(const char *massege)
 {
-    if(own_fd)
-        close(fd);
+    if(!is_connected)
+        return;
+
+    send(sock, massege, strlen(massege) + 1, 0);
+}
+
+void ChatClient::Read(char *str, size_t size)
+{
+    if(!is_connected)
+    {
+        str[0] = '\0';
+        return;
+    }
+
+    int i;
+
+    int bytes = read(sock, str, size);
+    if(bytes < 1)
+    {
+        is_connected = false;
+        strncpy(str, server_disconnected, size);
+        return;
+    }
+
+    for(i = 0; i < bytes; i++)
+    {
+        if(str[i] == '\n')
+            str[i] = 0;
+    }
+
+    return;
 }

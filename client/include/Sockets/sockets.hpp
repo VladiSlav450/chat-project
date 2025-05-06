@@ -3,33 +3,22 @@
 #ifndef SOCKETS_HPP
 #define SOCKETS_HPP
 
-class FdHandler;
 
-enum { max_line_length = 1023 };
-
-class EventSelector
+class ChatClient
 {
-    FdHandler *pointer_fd;
-    char buffer[max_line_length];
+    int sock;
+    bool is_connected;
 public:
-    EventSelector() : pointer_fd(0), quit_flag(false) {}
-    ~EventSelector();
+    ChatClient() : sock(-1), is_connected(false) {}
+    
+    ~ChatClient();
 
-    void BreakLoop() { quit_flag = true; }
+    bool Connected(const char *ip, int port);
 
-    void Run();
-};
+    void Send(const char *massege);
+    void Read(char *str, size_t size);
 
-class FdHandler
-{
-    int fd;
-    bool own_fd;
-public:
-    FdHandler(int a_fd, bool own) : fd(a_fd), own_fd(own) {}
-    ~FdHandler();
-    virtual void Handle(bool r, bool w) = 0;
-
-    int GetFd() const { return fd; }
+    bool IsConnected() const { return is_connected; }
 };
 
 #endif // SOCKETS_HPP
