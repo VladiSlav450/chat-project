@@ -63,32 +63,18 @@ void ChatClient::Start()
         return;
     }
 
-    size_t len = strlen(buffer);
+    buffer[strcspn(buffer, "\n")] = '\0'; 
 
-    if(strcmp(buffer, "exit\n") == 0)
+    if(strcmp(buffer, "exit") == 0)
     {
         is_connected = false;
     }
 
-    buffer[len - 1] = '\r';
-    buffer[len] = '\n';
-    buffer[len + 1] = '\0';
-    size_t sent = write(sock, buffer, len + 1);
-    if(sent != len + 1) 
-        perror("Error write!");
-
-    rc = read(sock, buffer, sizeof(buffer));
-    if(rc <= 0)
-    {
-        printf("Connection error\n");
-        return;
-    }
-    buffer[rc] = '\0';
-    printf("%s\n", buffer);
+    write(sock, buffer, strlen(buffer));
 
     is_connected = true;
     do {
-        int max_fd;
+        int i, max_fd;
         fd_set rds;
 
         FD_ZERO(&rds);
@@ -121,7 +107,7 @@ void ChatClient::Start()
                 {
                     printf("%s\n", server_disconnected);
                     is_connected = false;
-                    continue;
+                    break;
                 }
 
                 buffer[rc] = '\0';
@@ -133,21 +119,17 @@ void ChatClient::Start()
                 if(!fgets(buffer, sizeof(buffer), stdin))
                 {
                     is_connected = false;
-                    continue;
+                    break;
                 }
-                
-                len = strlen(buffer);
-                buffer[len - 1] = '\r';
-                buffer[len] = '\n';
-                buffer[len + 1] = '\0';
-                sent = write(sock, buffer, len + 1);
-                if(sent != len + 1)
-                    perror("Error write");
 
-                if(strcmp(buffer, "exit\r\n") == 0)
+                buffer[strcspn(buffer, '\n')] = '\0';
+
+                write(sock, buffer, strlen(buffer));
+
+                if(strcmp(buffer, "exit") == 0)
                 {
                     is_connected = false;
-                    continue;
+                    break;
                 }
             }
         }
