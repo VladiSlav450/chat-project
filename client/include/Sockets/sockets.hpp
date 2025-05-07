@@ -17,7 +17,12 @@ public:
 
     bool Connected(const char *ip = "127.0.0.1", int port = 7777);
 
+    bool WantRead() const { return true; }
+    bool WantWrite() const { return true; }
+
     void Start();
+    void Read();
+    void Write();
 
     bool IsConnected() const { return is_connected; }
 };

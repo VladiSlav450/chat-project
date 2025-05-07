@@ -48,43 +48,15 @@ bool ChatClient::Connected(const char *ip, int port)
 
 void ChatClient::Start()
 {
-    int rc = read(sock, buffer, sizeof(buffer));
-    if(rc <= 0)
-    {
-        printf("Connection error\n");
-        return;
+    try{
+        ChatClient::Read();
+        ChatClient::Write();
+        ChatClient::Read();
     }
-
-    buffer[rc] = '\0';
-    printf("%s\n", buffer);
-
-    if(!fgets(buffer, sizeof(buffer), stdin))
+    catch(const ExternalError& ex)
     {
-        return;
+
     }
-
-    size_t len = strlen(buffer);
-
-    if(strcmp(buffer, "exit\n") == 0)
-    {
-        is_connected = false;
-    }
-
-    buffer[len - 1] = '\r';
-    buffer[len] = '\n';
-    buffer[len + 1] = '\0';
-    size_t sent = write(sock, buffer, len + 1);
-    if(sent != len + 1) 
-        perror("Error write!");
-
-    rc = read(sock, buffer, sizeof(buffer));
-    if(rc <= 0)
-    {
-        printf("Connection error\n");
-        return;
-    }
-    buffer[rc] = '\0';
-    printf("%s\n", buffer);
 
     is_connected = true;
     do {
@@ -115,44 +87,49 @@ void ChatClient::Start()
         {
             if(FD_ISSET(sock, &rds))
             {
-                int rc = read(sock, buffer, sizeof(buffer));
-
-                if(rc < 1)
-                {
-                    printf("%s\n", server_disconnected);
-                    is_connected = false;
-                    continue;
-                }
-
-                buffer[rc] = '\0';
-                printf("%s\n", buffer);
-            }
+                ChatClient::Read();
 
             if(FD_ISSET(STDIN_FILENO, &rds))
             {
-                if(!fgets(buffer, sizeof(buffer), stdin))
-                {
-                    is_connected = false;
-                    continue;
-                }
-                
-                len = strlen(buffer);
-                buffer[len - 1] = '\r';
-                buffer[len] = '\n';
-                buffer[len + 1] = '\0';
-                sent = write(sock, buffer, len + 1);
-                if(sent != len + 1)
-                    perror("Error write");
-
-                if(strcmp(buffer, "exit\r\n") == 0)
-                {
-                    is_connected = false;
-                    continue;
-                }
+                Write();
             }
         }
 
     } while(is_connected);
 } 
 
+void Read()
+{
+    int rc = read(sock, buffer, sizeof(buffer));
+    if(rc <= 0)
+    {
+        printf("Connection error\n");
+        throw ExternalError("Read failed");
+    }
+
+    buffer[rc] = '\0';
+    printf("%s\n", buffer);
+}
+
+void Write()
+{
+    if(!fgets(buffer, sizeof(buffer), stdin))
+    {
+        throw ExternalError("Fgets failed");
+    }
+
+    size_t len = strlen(buffer);
+
+    if(strcmp(buffer, "exit\n") == 0)
+    {
+        is_connected = false;
+    }
+
+    buffer[len - 1] = '\r';
+    buffer[len] = '\n';
+    buffer[len + 1] = '\0';
+    size_t sent = write(sock, buffer, len + 1);
+    if(sent != len + 1) 
+        throw ExternalError("Write failed");
+}
 
