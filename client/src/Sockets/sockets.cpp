@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>  
 #include <cstring> 
+#include <cerrno>
 
 
 #include "../../include/Sockets/sockets.hpp"
@@ -42,37 +43,71 @@ bool ChatClient::Connected(const char *ip, int port)
     return is_connected;
 }
 
-void ChatClient::Send(const char *massege)
+void ChatClient::Start()
 {
-    if(!is_connected)
-        return;
+    is_connected = true;
+    do {
+        int i;
+        fd_set rds;
+        FD_ZERO(&rds);
 
-    send(sock, massege, strlen(massege) + 1, 0);
-}
+        FD_SET(sock, &rds);
+        FD_SET(STDIN_FILENO, &rds);
 
-void ChatClient::Read(char *str, size_t size)
-{
-    if(!is_connected)
-    {
-        str[0] = '\0';
-        return;
-    }
+        int res = select(sock + 1, &rds, 0, 0, 0);
+        if(res < 0)
+        {
+            if(errno == EINTR)
+                continue;
+            else
+                break;
+        }
 
-    int i;
+        if(res > 0)
+        {
+            if(FD_ISSET(sock, &rds))
+            {
+                int rc = read(sock, buffer, sizeof(buffer));
 
-    int bytes = read(sock, str, size);
-    if(bytes < 1)
-    {
-        is_connected = false;
-        strncpy(str, server_disconnected, size);
-        return;
-    }
+                if(rc < 1)
+                {
+                    printf("%s\n", server_disconnected);
+                    is_connected = false;
+                    break;
+                }
 
-    for(i = 0; i < bytes; i++)
-    {
-        if(str[i] == '\n')
-            str[i] = 0;
-    }
+                buffer[rc] = '\0';
+                printf("%s\n", buffer);
+            }
 
-    return;
-}
+            if(FD_ISSET(STDIN_FILENO, &rds))
+            {
+                if(!fgets(buffer, sizeof(buffer), stdin))
+                {
+                    is_connected = false;
+                    break;
+                }
+
+                for(i = 0; i < max_line_length; i++)
+                {
+                    if(buffer[i] == '\n')
+                    {
+                        buffer[i] = '\0';
+                        break;
+                    }
+                    
+                    if(strcmp(buffer, "exit") == 0)
+                    {
+                        is_connected = false;
+                        break;
+                    }
+                }
+
+                write(sock, buffer, strlen(buffer));
+            }
+        }
+
+    } while(is_connected);
+} 
+
+

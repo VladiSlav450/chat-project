@@ -10,8 +10,9 @@
 !_TAG_PROGRAM_URL	https://ctags.io/	/official site/
 !_TAG_PROGRAM_VERSION	5.9.0	//
 Connected	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^bool ChatClient::Connected(const char *ip, int port)$/;"	f	class:ChatClient	typeref:typename:bool
-Read	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^void ChatClient::Read(char *str, size_t size)$/;"	f	class:ChatClient	typeref:typename:void
-Send	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^void ChatClient::Send(const char *massege)$/;"	f	class:ChatClient	typeref:typename:void
+Start	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^void ChatClient::Start()$/;"	f	class:ChatClient	typeref:typename:void
+main	/home/knauf/my_program/cpp/chat_project/client/src/main.cpp	/^int main()$/;"	f	typeref:typename:int
+port	/home/knauf/my_program/cpp/chat_project/client/src/main.cpp	/^static int port = 7777; $/;"	v	typeref:typename:int	file:
 server_connected	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^static const char server_connected[] = "[Server connected!]";$/;"	v	typeref:typename:const char[]	file:
 server_disconnected	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^static const char server_disconnected[] = "[Server dissconnected!]";$/;"	v	typeref:typename:const char[]	file:
 ~ChatClient	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^ChatClient::~ChatClient()$/;"	f	class:ChatClient
