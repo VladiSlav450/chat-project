@@ -7,6 +7,7 @@
 #include <cstring> 
 
 
+#include "../include/Exception/exception.hpp"
 #include  "../include/Sockets/sockets.hpp"
 
 static int port = 7777; 
@@ -15,11 +16,7 @@ int main()
 {
     ChatClient client;
 
-    if(!client.Connected())
-    {
-       perror("client"); 
-        return 1;
-    }
+    client.Connected();
 
     client.Start();
 

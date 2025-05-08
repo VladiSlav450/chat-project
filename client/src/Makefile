@@ -4,7 +4,7 @@ CXXFLAGS = -g -Wall -O2
 
 TARGET = client_chat
 
-SRCS = main.o Sockets/sockets.cpp 
+SRCS = main.o Sockets/sockets.cpp Exception/exception.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 $(TARGET): $(OBJS)

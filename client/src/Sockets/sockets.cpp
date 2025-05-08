@@ -8,6 +8,7 @@
 #include <cerrno>
 
 
+#include "../../include/Exception/exception.hpp"
 #include "../../include/Sockets/sockets.hpp"
 
 static const char server_disconnected[] = "[Server dissconnected!]";
@@ -19,13 +20,13 @@ ChatClient::~ChatClient()
         close(sock);
 }
 
-bool ChatClient::Connected(const char *ip, int port)
+void ChatClient::Connected(const char *ip, int port)
 {
     int res;
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if(sock == -1)
-        return false;
+        throw ExternalError("Socket failed!", 100, errno);
 
     struct sockaddr_in serv_addr;
 
@@ -35,101 +36,130 @@ bool ChatClient::Connected(const char *ip, int port)
 
     res = connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
     if(res < 0)
-    {
-        close(sock);
-        return false;
-    }
+        throw ExternalError("Connect failed!", 101, errno); 
 
     is_connected = true;
     printf("%s\n", server_connected);
-
-    return is_connected;
 }
 
 void ChatClient::Start()
 {
-    try{
-        ChatClient::Read();
-        ChatClient::Write();
-        ChatClient::Read();
-    }
-    catch(const ExternalError& ex)
-    {
-
-    }
-
     is_connected = true;
-    do {
-        int max_fd;
-        fd_set rds;
 
-        FD_ZERO(&rds);
+    Read();
+    FGetsAndWrite();
+    Read();
 
-        FD_SET(sock, &rds);
-        FD_SET(STDIN_FILENO, &rds);
+    try
+    {
+        do {
+            int max_fd;
+            fd_set rds;
 
-        if(sock > STDIN_FILENO)
-            max_fd = sock + 1;
-        else
-            max_fd = STDIN_FILENO + 1;
+            FD_ZERO(&rds);
 
-        int res = select(max_fd, &rds, 0, 0, 0);
+            FD_SET(sock, &rds);
+            FD_SET(STDIN_FILENO, &rds);
+            max_fd = (sock > STDIN_FILENO) ? sock + 1 : STDIN_FILENO + 1;
 
-        if(res < 0)
-        {
-            if(errno == EINTR)
-                continue;
-            else
-                break;
-        }
+            int res = select(max_fd + 1, &rds, 0, 0, 0);
 
-        if(res > 0)
-        {
+            if(res < 0 && errno != EINTR)
+                throw ExternalError("Select failed", 106, errno);
+
             if(FD_ISSET(sock, &rds))
-            {
-                ChatClient::Read();
+                Read();
 
             if(FD_ISSET(STDIN_FILENO, &rds))
-            {
-                Write();
-            }
-        }
+                FGetsAndWrite();
 
-    } while(is_connected);
+            } while(is_connected);
+    }
+    catch(const ExternalError& ex) 
+    {
+        printf("Error %d: %s (errno=%s)\n", ex.GetErrCode(), ex.GetComment(), strerror(ex.GetErrnoCode())); 
+    }
 } 
 
-void Read()
+
+void ChatClient::Read()
 {
     int rc = read(sock, buffer, sizeof(buffer));
-    if(rc <= 0)
+    if(rc < 0)
     {
-        printf("Connection error\n");
-        throw ExternalError("Read failed");
+        throw ExternalError("Read failed", 103, errno);
     }
+    if(rc == 0)
+        is_connected = false;
 
     buffer[rc] = '\0';
-    printf("%s\n", buffer);
+    printf("%s", buffer);
 }
 
-void Write()
+void ChatClient::FGetsAndWrite()
 {
-    if(!fgets(buffer, sizeof(buffer), stdin))
+    size_t len_str = FGets();
+
+    Write(len_str);
+}
+
+size_t ChatClient::FGets()
+{
+    size_t len;
+
+    if(fgets(buffer, sizeof(buffer), stdin) == NULL)
     {
-        throw ExternalError("Fgets failed");
+        if(feof(stdin) == false)
+            throw ExternalError("Fgets failed", 104, errno);
     }
 
-    size_t len = strlen(buffer);
 
     if(strcmp(buffer, "exit\n") == 0)
     {
         is_connected = false;
     }
 
-    buffer[len - 1] = '\r';
-    buffer[len] = '\n';
-    buffer[len + 1] = '\0';
-    size_t sent = write(sock, buffer, len + 1);
-    if(sent != len + 1) 
-        throw ExternalError("Write failed");
+    len = strlen(buffer);
+
+    if(len > 0 && buffer[len - 1] == '\n')
+    {
+        buffer[len - 1] = '\r';
+        buffer[len] = '\n';
+        buffer[++len] = '\0';
+    }
+    return len;
+}
+
+void ChatClient::Write(size_t len)
+{
+    ssize_t res; 
+    size_t total_sent = 0;
+
+    while(total_sent < len)
+    {
+        res = write(sock, buffer + total_sent, len -  total_sent);
+
+        if(res == -1)
+        {
+            if(errno == EINTR)
+                continue;
+
+            else if(errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                fd_set wrs;
+
+                FD_ZERO (&wrs);
+                FD_SET(sock, &wrs);
+                 
+                select(sock + 1, NULL, &wrs, NULL, NULL);
+                continue;
+            }
+            else
+            {
+                throw ExternalError("Write failed", 105, errno); 
+            }
+        }
+        total_sent += res;
+    } 
 }
 

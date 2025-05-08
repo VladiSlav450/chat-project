@@ -1,5 +1,6 @@
 # Name file: .gitingnore
 
+*.txt
 *.o
 *.out
 tags

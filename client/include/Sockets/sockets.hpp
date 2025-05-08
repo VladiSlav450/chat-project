@@ -12,17 +12,19 @@ class ChatClient
     bool is_connected;
 public:
     ChatClient() : sock(-1), is_connected(false) {}
-    
     ~ChatClient();
 
-    bool Connected(const char *ip = "127.0.0.1", int port = 7777);
-
-    bool WantRead() const { return true; }
-    bool WantWrite() const { return true; }
+    void Connected(const char *ip = "127.0.0.1", int port = 7777);
 
     void Start();
+
+private:
     void Read();
-    void Write();
+
+    void FGetsAndWrite();
+
+    size_t FGets();
+    void Write(size_t len);
 
     bool IsConnected() const { return is_connected; }
 };

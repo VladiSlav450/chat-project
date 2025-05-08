@@ -9,10 +9,12 @@
 !_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
 !_TAG_PROGRAM_URL	https://ctags.io/	/official site/
 !_TAG_PROGRAM_VERSION	5.9.0	//
-Connected	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^bool ChatClient::Connected(const char *ip, int port)$/;"	f	class:ChatClient	typeref:typename:bool
+Connected	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^void ChatClient::Connected(const char *ip, int port)$/;"	f	class:ChatClient	typeref:typename:void
+FGets	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^size_t ChatClient::FGets()$/;"	f	class:ChatClient	typeref:typename:size_t
+FGetsAndWrite	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^void ChatClient::FGetsAndWrite()$/;"	f	class:ChatClient	typeref:typename:void
+Read	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^void ChatClient::Read()$/;"	f	class:ChatClient	typeref:typename:void
 Start	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^void ChatClient::Start()$/;"	f	class:ChatClient	typeref:typename:void
-main	/home/knauf/my_program/cpp/chat_project/client/src/main.cpp	/^int main()$/;"	f	typeref:typename:int
-port	/home/knauf/my_program/cpp/chat_project/client/src/main.cpp	/^static int port = 7777; $/;"	v	typeref:typename:int	file:
+Write	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^void ChatClient::Write(size_t len)$/;"	f	class:ChatClient	typeref:typename:void
 server_connected	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^static const char server_connected[] = "[Server connected!]";$/;"	v	typeref:typename:const char[]	file:
 server_disconnected	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^static const char server_disconnected[] = "[Server dissconnected!]";$/;"	v	typeref:typename:const char[]	file:
 ~ChatClient	/home/knauf/my_program/cpp/chat_project/client/src/Sockets/sockets.cpp	/^ChatClient::~ChatClient()$/;"	f	class:ChatClient
