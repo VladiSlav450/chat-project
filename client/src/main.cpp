@@ -12,11 +12,20 @@
 
 static int port = 7777; 
 
-int main()
+int main(int argc, char *argv[])
 {
-    ChatClient client;
+    if(argc != 3)
+    {
+        printf("Usage: ./client_char <IP> <PORT>\n");
+        return 1 
+    }
 
-    client.Connected();
+    ChatClient client;
+    
+    if(!client.Connected(argc[1], argv[2]));
+    {
+        return 2
+    }
 
     client.Start();
 

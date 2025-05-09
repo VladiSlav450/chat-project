@@ -10,7 +10,10 @@
 
 #include "../../include/Exception/exception.hpp"
 #include "../../include/Sockets/sockets.hpp"
+#include "../../include/myAlgorithms/myAlgorithms.hpp"
 
+
+static const char server_not_connected[] = "[Server not connected!]";
 static const char server_disconnected[] = "[Server dissconnected!]";
 static const char server_connected[] = "[Server connected!]";
 
@@ -20,15 +23,21 @@ ChatClient::~ChatClient()
         close(sock);
 }
 
-void ChatClient::Connected(const char *ip, int port)
+bool ChatClient::Connected(const char *ip, const char *str_port)
 {
     int res;
+    struct sockaddr_in serv_addr;
+    int port;
+
+    try
+    {
+    port = ValidPort(str_port);
+    ValidIp(ip);
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if(sock == -1)
         throw ExternalError("Socket failed!", 100, errno);
 
-    struct sockaddr_in serv_addr;
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
@@ -40,15 +49,31 @@ void ChatClient::Connected(const char *ip, int port)
 
     is_connected = true;
     printf("%s\n", server_connected);
+
+    Read();
+    FGetsAndWrite();
+    return true;
+    }
+    catch(const ExternalError& ex)
+    {
+        fprintf(stderr, "%s\nError %d: %s (errno=%s)\n", server_not_connected, ex.GetErrCode(), ex.GetComment(), strerror(ex.GetErrnoCode())); 
+        return false;
+    }
+    catch(const PortInputError& ex)
+    {
+        fprintf(stderr, "%s\nError %d: %s (port = %s)\n", server_not_connected, ex.GetErrCode(), ex.GetComment(), ex.GetInvalidPort()); 
+        return false;
+    }
+    catch(const IpInputError& ex)
+    {
+        fprintf(stderr, "%s\nError %d: %s (ip = %s)\n", server_not_connected, ex.GetErrCode(), ex.GetComment(), ex.GetInvalidIp()); 
+        return false;
+    }
 }
 
 void ChatClient::Start()
 {
     is_connected = true;
-
-    Read();
-    FGetsAndWrite();
-    Read();
 
     try
     {
@@ -77,7 +102,7 @@ void ChatClient::Start()
     }
     catch(const ExternalError& ex) 
     {
-        printf("Error %d: %s (errno=%s)\n", ex.GetErrCode(), ex.GetComment(), strerror(ex.GetErrnoCode())); 
+        fprintf(stderr, "Error %d: %s (errno=%s)\n", ex.GetErrCode(), ex.GetComment(), strerror(ex.GetErrnoCode())); 
     }
 } 
 
@@ -161,5 +186,21 @@ void ChatClient::Write(size_t len)
         }
         total_sent += res;
     } 
+}
+
+int ChatClient::ValidPort(const char *str_port)
+{
+    ssize_t int_port = Checking_if_a_port_value_is_valid(str_port);
+    if(int_port < 1 || int_port > 65535)
+        throw PortInputError("Invalid port, must be 1-65535", 107, str_port);
+    return int_port;
+}
+
+void ChatClient::ValidIp(const char *ip)
+{
+    if(Checking_the_validity_of_the_IP_value(ip) == false)
+    {
+        throw IpInputError("Invalid IPv4 format", 108, ip);
+    }
 }
 

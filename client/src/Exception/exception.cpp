@@ -4,6 +4,21 @@
 
 #include "../../include/Exception/exception.hpp"
 
+IpInputError::IpInputError(const IpInputError& other)
+{
+    invalid_ip_ = strdup(other.invalid_ip_);
+}
+
+PortInputError::PortInputError(const PortInputError& other)
+{
+    invalid_port_ = strdup(other.invalid_port_);
+} 
+
+PortInputError::~PortInputError()
+{
+    delete[] invalid_port_;
+}
+
 Error::Error(const char *cmt, int err_c)
 {
     comment = strdup(cmt);
