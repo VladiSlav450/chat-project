@@ -14,7 +14,7 @@ public:
     ChatClient() : sock(-1), is_connected(false) {}
     ~ChatClient();
 
-    bool Connected(const char *ip = "127.0.0.1", int port = 7777);
+    bool Connected(const char *ip = "127.0.0.1", const char *port = "7777");
 
     void Start();
 
@@ -28,7 +28,7 @@ private:
 
     bool IsConnected() const { return is_connected; }
 
-    int ValidPort(char port);
+    int ValidPort(const char *port);
     void ValidIp(const char *ip);
 };
 

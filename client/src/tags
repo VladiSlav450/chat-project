@@ -9,9 +9,14 @@
 !_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
 !_TAG_PROGRAM_URL	https://ctags.io/	/official site/
 !_TAG_PROGRAM_VERSION	5.9.0	//
-Algorithms_suite	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^Suite *Algorithms_suite(void)$/;"	f	typeref:typename:END_TEST Suite *
-Checking_if_a_port_value_is_valid	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/myAlgorithms.cpp	/^ssize_t Checking_if_a_port_value_is_valid(const char *port)$/;"	f	typeref:typename:ssize_t
-Checking_the_validity_of_the_IP_value	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/myAlgorithms.cpp	/^bool Checking_the_validity_of_the_IP_value(const char *ip)$/;"	f	typeref:typename:bool
-START_TEST	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^START_TEST(test_Checking_if_a_port_value_is_valid)$/;"	f
-START_TEST	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^START_TEST(test_Checking_the_validity_of_the_IP_value)$/;"	f	typeref:typename:END_TEST
-main	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^int main(void)$/;"	f	typeref:typename:int
+Error	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error::Error(const Error& other) : comment(NULL), err_code(other.err_code)$/;"	f	class:Error
+Error	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error::Error(const char *cmt, int err_c) : comment(NULL), err_code(err_c)$/;"	f	class:Error
+IpInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^IpInputError::IpInputError(const IpInputError& other) $/;"	f	class:IpInputError
+PortInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^PortInputError::PortInputError(const PortInputError& other) $/;"	f	class:PortInputError
+operator =	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error& Error::operator=(const Error& other)$/;"	f	class:Error	typeref:typename:Error &
+operator =	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^IpInputError& IpInputError::operator=(const IpInputError& other)$/;"	f	class:IpInputError	typeref:typename:IpInputError &
+operator =	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^PortInputError& PortInputError::operator=(const PortInputError& other)$/;"	f	class:PortInputError	typeref:typename:PortInputError &
+strdup	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^char *Error::strdup(const char *str)$/;"	f	class:Error	typeref:typename:char *
+~Error	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error::~Error()$/;"	f	class:Error
+~IpInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^IpInputError::~IpInputError()$/;"	f	class:IpInputError
+~PortInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^PortInputError::~PortInputError()$/;"	f	class:PortInputError
