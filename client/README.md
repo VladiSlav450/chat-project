@@ -1,11 +1,8 @@
 TCP chat client.
 
-i:p = 127.0.0.1
-port = 7777
-
-1) cd client/src/
+1) cd src/
 2) make
-3) ./client_chat
+3) ./client_chat IP PORT
 
 - Implemented basic TCP client using POSIX sockets and select()  
 - Added Telnet-compatible message formatting (\r\n)  
