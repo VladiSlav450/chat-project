@@ -125,10 +125,12 @@ void ChatSession::ProcessLine(const char *str)
         delete[] emsg;
         return;
     }
+
     int nl = strlen(name);
     char *msg = new char[nl + len + 5];
     sprintf(msg, "<%s> %s\n", name, str);
-    the_master->SendAll(msg);
+
+    the_master->SendAll(msg, this);
     delete[] msg;
 }
 
