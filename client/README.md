@@ -8,4 +8,3 @@ TCP chat client.
 - Added Telnet-compatible message formatting (\r\n)  
 - Handles server connection/disconnection  
 - Supports basic message exchange  
-- TODO: Refactor into smaller methods, add error recovery  
