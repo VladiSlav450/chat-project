@@ -29,11 +29,12 @@ class ChatSession : FdHandler
     ~ChatSession();
 
     void Send(const char *msg);
-    virtual void Handle(bool re, bool we);
     void ReadAndIgnore();
     void ReadAndCheck();
     void CheckLines();
     void ProcessLine(const char *str);
+
+    virtual void Handle(bool re, bool we);
 };
 
 class ChatServer : public FdHandler 

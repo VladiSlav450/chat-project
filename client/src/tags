@@ -9,17 +9,22 @@
 !_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
 !_TAG_PROGRAM_URL	https://ctags.io/	/official site/
 !_TAG_PROGRAM_VERSION	5.9.0	//
+Add	/home/knauf/my_program/cpp/chat_project/client/src/sockets.cpp	/^void EventSelector::Add(FdHandler *el)$/;"	f	class:EventSelector	typeref:typename:void
 Algorithms_suite	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^Suite *Algorithms_suite(void)$/;"	f	typeref:typename:END_TEST Suite *
-ChatClient	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^ChatClient::ChatClient(NetworkManager *a_net, GUIInterface *a_gui, MessageProcessor *a_proc) : n/;"	f	class:ChatClient
+ChatClient	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^ChatClient::ChatClient(EventSelector *sel, FLTKguiSession *disp, int fd_sock) : FdHandler(fd_soc/;"	f	class:ChatClient
 Checking_if_a_port_value_is_valid	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/myAlgorithms.cpp	/^ssize_t Checking_if_a_port_value_is_valid(const char *port)$/;"	f	typeref:typename:ssize_t
 Checking_the_validity_of_the_IP_value	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/myAlgorithms.cpp	/^bool Checking_the_validity_of_the_IP_value(const char *ip)$/;"	f	typeref:typename:bool
 Error	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error::Error(const Error& other) : comment(NULL), err_code(other.err_code)$/;"	f	class:Error
 Error	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error::Error(const char *cmt, int err_c) : comment(NULL), err_code(err_c)$/;"	f	class:Error
 IpInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^IpInputError::IpInputError(const IpInputError& other) $/;"	f	class:IpInputError
 PortInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^PortInputError::PortInputError(const PortInputError& other) $/;"	f	class:PortInputError
+Remove	/home/knauf/my_program/cpp/chat_project/client/src/sockets.cpp	/^bool EventSelector::Remove(FdHandler *el)$/;"	f	class:EventSelector	typeref:typename:bool
+Run	/home/knauf/my_program/cpp/chat_project/client/src/sockets.cpp	/^void EventSelector::Run()$/;"	f	class:EventSelector	typeref:typename:void
 START_TEST	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^START_TEST(test_Checking_if_a_port_value_is_valid)$/;"	f
 START_TEST	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^START_TEST(test_Checking_the_validity_of_the_IP_value)$/;"	f	typeref:typename:END_TEST
-Start	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^ChatClient *ChatClient::Start(const char *ip, const char *str_port)$/;"	f	class:ChatClient	typeref:typename:ChatClient *
+Start	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^ChatClient *ChatClient::Start(EventSelector *sel, const char *ip, const char *str_port)$/;"	f	class:ChatClient	typeref:typename:ChatClient *
+ValidIp	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void ChatClient::ValidIp(const char *ip)$/;"	f	class:ChatClient	typeref:typename:void
+ValidPort	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^int ChatClient::ValidPort(const char *str_port)$/;"	f	class:ChatClient	typeref:typename:int
 main	/home/knauf/my_program/cpp/chat_project/client/src/main.cpp	/^int main(int argc, char *argv[])$/;"	f	typeref:typename:int
 main	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^int main(void)$/;"	f	typeref:typename:int
 operator =	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error& Error::operator=(const Error& other)$/;"	f	class:Error	typeref:typename:Error &
@@ -28,5 +33,7 @@ operator =	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exceptio
 strdup	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^char *Error::strdup(const char *str)$/;"	f	class:Error	typeref:typename:char *
 ~ChatClient	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^ChatClient::~ChatClient()$/;"	f	class:ChatClient
 ~Error	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error::~Error()$/;"	f	class:Error
+~EventSelector	/home/knauf/my_program/cpp/chat_project/client/src/sockets.cpp	/^EventSelector::~EventSelector()$/;"	f	class:EventSelector
+~FdHandler	/home/knauf/my_program/cpp/chat_project/client/src/sockets.cpp	/^FdHandler::~FdHandler()$/;"	f	class:FdHandler
 ~IpInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^IpInputError::~IpInputError()$/;"	f	class:IpInputError
 ~PortInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^PortInputError::~PortInputError()$/;"	f	class:PortInputError

@@ -9,8 +9,7 @@
  *
  *  Returns:
  *  port number - with success
- *  NULL(0)        - if ptr == NULL
- *  -1          - in case of error
+ *  -1          - in case of error or port == NULL
  */
 
 ssize_t Checking_if_a_port_value_is_valid(const char *port);
