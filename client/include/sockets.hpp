@@ -1,6 +1,5 @@
 // client/includesockets.hpp
 
-
 class FdHandler;
 
 class EventSelector
@@ -26,7 +25,7 @@ class FdHandler
     bool own_fd_;
 public:
     FdHandler(int fd, bool own) : fd_(fd), own_fd_(own) {}
-    ~FdHandler();
+    virtual ~FdHandler();
 
     int GetFd() const { return fd_; }
 

@@ -1,20 +1,21 @@
-CXX = g++
-CXXFLAGS = -g -Wall -O2
+FLTK_CONFIG := $(shell which fltk-config 2>/dev/null)
+ifeq ($(FLTK_CONFIG),)
+	$(error "FLTK not found! Install with: sudo apt-get install libfltk1.3-dev")
+endif
 
+CXX = g++
+CXXFLAGS = -g -Wall -Wextra -O2 $(shell $(FLTK_CONFIG) --cxxflags)
+LDGLAGS = $(shell $(FLTK_CONFIG) --ldflags)
 
 TARGET = client_chat
-
-SRCS = main.cpp Sockets/sockets.cpp Exception/exception.cpp 
-OBJS = $(SRCS:.cpp=.o) myAlgorithms/myAlgorithms.o
+SRCS = main.cpp sockets.cpp chatclient.cpp Exception/exception.cpp myAlgorithms/myAlgorithms.cpp  
+OBJS = $(SRCS:.cpp=.o)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) $^ -o $@
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-myAlgorithms/myAlgorithms.o:
-	@echo "Using prcompiled myAlgorithms.o"
 
 clean:
 	rm -f $(OBJS) $(TARGET)

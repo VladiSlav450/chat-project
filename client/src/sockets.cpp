@@ -1,5 +1,11 @@
 // client/src/sockets.cpp
 
+#include <sys/socket.h>         
+#include <netinet/in.h>         
+#include <arpa/inet.h>          
+#include <unistd.h>            
+#include <fcntl.h>      
+
 
 #include "../include/sockets.hpp"
 
