@@ -10,23 +10,27 @@ Requirements
 
     Linux/Unix-like OS (tested on Ubuntu)
 
-```bash
-#1. Installing dependencies (Ubuntu/Debian)
+1. Installing dependencies (Ubuntu/Debian)
 
+```bash
     sudo apt update
     sudo apt install g++ make libfltk1.3-dev
     make
-    ```
+```
 
-#2. Project assembly
+2. Project assembly
+```bash
     cd src/
     make
+```
 
-#3. Client Launch
+3. Client Launch
+```bash
     ./client_chat <IP> <PORT>
 ```
 
 Example:
+
     `./client_chat 127.0.0.1 7777`
 
 Functionality:
