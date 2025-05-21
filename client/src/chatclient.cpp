@@ -1,7 +1,5 @@
 // client/src/chatclient.cpp
 
-#include <stdio.h>
-
 #include <FL/Fl.H>              
 #include <FL/Fl_Window.H>       
 #include <FL/Fl_Text_Display.H> 
