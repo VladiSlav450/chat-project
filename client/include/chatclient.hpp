@@ -15,41 +15,49 @@
 
 #include "sockets.hpp"
 
+enum {  
+    max_line_length = 1023,
+
+    SPACING = 20,
+
+    SIZEFONT = 14,
+
+    LABEL_W = 50,
+
+    BUTTON_W = 100,
+    BUTTON_H = 40,
+
+    DISPLAY_W = BUTTON_W * 3 + SPACING * 2,
+    DISPLAY_H = BUTTON_W * 3,
+
+    INPUT_W = BUTTON_W * 3 + 2 * SPACING - LABEL_W,
+    INPUT_H = 30,
+
+    WINDOW_W = DISPLAY_W + SPACING * 2,
+    WINDOW_H = DISPLAY_H + INPUT_H + BUTTON_H + SPACING * 4
+};
 
 class ChatClient;
 
-enum {  
-    WIDTH_WINDOW = 600,
-    HEIGTH_WINDOW = 400,
-
-    MARGIN_SPACING = 20,
-    CHAT_DISPLAY_H = 360,
-    INPUT_FIELD_W = 460,
-    INPUT_FIELD_H = 30,
-    BUTTON_W = 90
-};
-
 class FLTKguiSession : FdHandler
 {
-
     friend ChatClient;
 
     ChatClient *the_master;
 
-    F1_Window *window;
+    Fl_Window *window;
+    Fl_Text_Buffer *chat_buffer;
+    Fl_Text_Display *display;
+    Fl_Input *input;
+    Fl_Button *send_button;
 
-    F1_Text_Buffer *chat_buffer;
-    F1_Text_Display *chat_display;
-
-    F1_Input *input_field;
-    F1_Button *send_button;
-
-    FLTKguiSession(int fd);
+    FLTKguiSession(int fd, Fl_Window *win, Fl_Text_Buffer *ch_buf, Fl_Text_Display *chat_disp, Fl_Input *inp, Fl_Button *send_but);
     ~FLTKguiSession();
 
-    static FLTKguiSession *Start(int fd);
+    static FLTKguiSession *Start(Display *display);
+    static void SendCallback(Fl_Widget *w, void *data);
 
-    void SendCallback(F1_Widget *w, void *data);
+    void PrintAndSend();
     void Show(const char *msg);
     virtual void Handle(bool re, bool we);
 
@@ -57,6 +65,8 @@ class FLTKguiSession : FdHandler
 
 class ChatClient : public FdHandler
 {
+    friend FLTKguiSession;
+
     EventSelector *the_selector;
     FLTKguiSession *fltk_session;
 
@@ -70,8 +80,8 @@ public:
 private:
     virtual void Handle(bool re, bool we);
 
-    void ValiPort(const char *port);
-    bool ValidIp(const char *ip);
+    static int ValidPort(const char *port);
+    static void ValidIp(const char *ip);
 };
 
 #endif // CHATCLIENT_HPP

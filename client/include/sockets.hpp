@@ -1,11 +1,14 @@
-// client/includesockets.hpp
+// client/include/sockets.hpp
+
+#ifndef SOCKETS_HPP
+#define SOCKETS_HPP
 
 class FdHandler;
 
 class EventSelector
 {
     FdHandler **fd_array;
-    int array_len;
+    int fd_array_len;
     int max_fd;
     bool quit_flag;
 public:
@@ -32,5 +35,7 @@ public:
     virtual void Handle(bool re, bool we) = 0;
 
     virtual bool WantRead() const { return true; }
-    virtual bool WantWrite() const { return true; }
+    virtual bool WantWrite() const { return false; }
 };
+
+#endif // SOCKETS_HPP

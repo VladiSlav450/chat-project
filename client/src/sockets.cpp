@@ -1,10 +1,13 @@
 // client/src/sockets.cpp
 
+#include <FL/Fl.H>
+
 #include <sys/socket.h>         
 #include <netinet/in.h>         
 #include <arpa/inet.h>          
 #include <unistd.h>            
 #include <fcntl.h>      
+#include <cerrno>
 
 
 #include "../include/sockets.hpp"
@@ -88,12 +91,13 @@ void EventSelector::Run()
             {
                 if(fd_array[i]->WantRead())
                     FD_SET(i, &rds);
+
                 if(fd_array[i]->WantWrite())
                     FD_SET(i, &wrs);
             }
         }
 
-        int res = select(max_fd + 1, &rds, &wds, 0, 0);
+        int res = select(max_fd + 1, &rds, &wrs, 0, 0);
         if(res < 0)
         {
             if(errno == EINTR)
@@ -106,7 +110,7 @@ void EventSelector::Run()
         {
             for(i = 0; i <= max_fd; i++)
             {
-                if(!fd_array[fd])
+                if(!fd_array[i])
                     continue;
 
                 bool r = FD_ISSET(i, &rds);

@@ -4,8 +4,8 @@ ifeq ($(FLTK_CONFIG),)
 endif
 
 CXX = g++
-CXXFLAGS = -g -Wall -Wextra -O2 $(shell $(FLTK_CONFIG) --cxxflags)
-LDGLAGS = $(shell $(FLTK_CONFIG) --ldflags)
+CXXFLAGS = -g -Wall -Wextra -O2 -I../include 
+LDFLAGS = -lfltk -lX11 
 
 TARGET = client_chat
 SRCS = main.cpp sockets.cpp chatclient.cpp Exception/exception.cpp myAlgorithms/myAlgorithms.cpp  

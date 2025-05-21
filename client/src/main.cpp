@@ -4,7 +4,7 @@
 
 
 #include "../include/Exception/exception.hpp"
-#include  "../include/sockets.hpp"
+#include "../include/sockets.hpp"
 #include "../include/chatclient.hpp"
 
 int main(int argc, char *argv[])
@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     }
 
     EventSelector *selector = new EventSelector;
-    ChatClient *client = new ChatClient::Start(selector, argv[1], argv[2]);
+    ChatClient *client = ChatClient::Start(selector, argv[1], argv[2]);
     
     if(!client)
     {

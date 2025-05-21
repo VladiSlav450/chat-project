@@ -16,20 +16,21 @@ Checking_if_a_port_value_is_valid	/home/knauf/my_program/cpp/chat_project/client
 Checking_the_validity_of_the_IP_value	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/myAlgorithms.cpp	/^bool Checking_the_validity_of_the_IP_value(const char *ip)$/;"	f	typeref:typename:bool
 Error	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error::Error(const Error& other) : comment(NULL), err_code(other.err_code)$/;"	f	class:Error
 Error	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error::Error(const char *cmt, int err_c) : comment(NULL), err_code(err_c)$/;"	f	class:Error
-FLTKguiSession	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^FLTKguiSession::FLTKguiSession(int fd, F1_Window *win, F1_Text_Buffer *ch_buffer, F1_Text_Displa/;"	f	class:FLTKguiSession
+FLTKguiSession	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^FLTKguiSession::FLTKguiSession(int fd, Fl_Window *win, Fl_Text_Buffer *ch_buf, Fl_Text_Display */;"	f	class:FLTKguiSession
 Handle	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void ChatClient::Handle(bool re, bool we)$/;"	f	class:ChatClient	typeref:typename:void
 Handle	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void FLTKguiSession::Handle(bool re, bool we)$/;"	f	class:FLTKguiSession	typeref:typename:void
 IpInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^IpInputError::IpInputError(const IpInputError& other) $/;"	f	class:IpInputError
 PortInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^PortInputError::PortInputError(const PortInputError& other) $/;"	f	class:PortInputError
+PrintAndSend	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void FLTKguiSession::PrintAndSend()$/;"	f	class:FLTKguiSession	typeref:typename:void
 Remove	/home/knauf/my_program/cpp/chat_project/client/src/sockets.cpp	/^bool EventSelector::Remove(FdHandler *el)$/;"	f	class:EventSelector	typeref:typename:bool
 Run	/home/knauf/my_program/cpp/chat_project/client/src/sockets.cpp	/^void EventSelector::Run()$/;"	f	class:EventSelector	typeref:typename:void
 START_TEST	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^START_TEST(test_Checking_if_a_port_value_is_valid)$/;"	f
 START_TEST	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^START_TEST(test_Checking_the_validity_of_the_IP_value)$/;"	f	typeref:typename:END_TEST
 Send	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void ChatClient::Send(const char *msg)$/;"	f	class:ChatClient	typeref:typename:void
-SendCallback	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void FLTKguiSession::SendCallback(F1_Widget *w, void *data)$/;"	f	class:FLTKguiSession	typeref:typename:void
+SendCallback	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void FLTKguiSession::SendCallback(Fl_Widget *w, void *data)$/;"	f	class:FLTKguiSession	typeref:typename:void
 Show	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void FLTKguiSession::Show(const char *msg)$/;"	f	class:FLTKguiSession	typeref:typename:void
 Start	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^ChatClient *ChatClient::Start(EventSelector *sel, const char *ip, const char *str_port)$/;"	f	class:ChatClient	typeref:typename:ChatClient *
-Start	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^FLTKguiSession *FLTKguiSession::Start(int fd)$/;"	f	class:FLTKguiSession	typeref:typename:FLTKguiSession *
+Start	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^FLTKguiSession *FLTKguiSession::Start(Display *display)$/;"	f	class:FLTKguiSession	typeref:typename:FLTKguiSession *
 ValidIp	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void ChatClient::ValidIp(const char *ip)$/;"	f	class:ChatClient	typeref:typename:void
 ValidPort	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^int ChatClient::ValidPort(const char *str_port)$/;"	f	class:ChatClient	typeref:typename:int
 main	/home/knauf/my_program/cpp/chat_project/client/src/main.cpp	/^int main(int argc, char *argv[])$/;"	f	typeref:typename:int

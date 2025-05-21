@@ -1,5 +1,6 @@
 // client/src/chatclient.cpp
 
+#include <stdio.h>
 
 #include <FL/Fl.H>              
 #include <FL/Fl_Window.H>       
@@ -10,7 +11,15 @@
 
 #include <X11/Xlib.h>
 
-#include "../incude/Exception/exception.hpp"
+#include <sys/socket.h>         
+#include <netinet/in.h>         
+#include <arpa/inet.h>          
+#include <unistd.h>            
+#include <fcntl.h>      
+#include <cerrno>
+
+
+#include "../include/Exception/exception.hpp"
 #include "../include/myAlgorithms/myAlgorithms.hpp"
 #include "../include/chatclient.hpp"
 
@@ -36,8 +45,9 @@ ChatClient *ChatClient::Start(EventSelector *sel, const char *ip, const char *st
 {
     try
     {
-        int port, fd_sock, fd_display, res;
-        Display *display;
+        size_t port;
+        int fd_sock, res;
+        struct sockaddr_in serv_addr;
         
         port = ValidPort(str_port);
         ValidIp(ip);
@@ -60,20 +70,20 @@ ChatClient *ChatClient::Start(EventSelector *sel, const char *ip, const char *st
             throw ExternalError("Connect failed!", 101, errno);
         }
 
+        Display *display;
+
         display = XOpenDisplay(0);
-        if(display == 0)
+        if(!display)
         {
             close(fd_sock);
             throw ExternalError("Dispaly failed!", 201, errno);
         }
 
-        fd_display = ConnectionNumber(disp);
+        FLTKguiSession *display_fltk = FLTKguiSession::Start(display);
 
-        FLTKguiSession *display_fltk = new FLTKguiSession::Start(fd_display);
-
-        if(display_fltk == 0)
+        if(!display_fltk)
         {
-            close(fd_sock)
+            close(fd_sock);
             throw ExternalError("FLTK failed!", 202, errno);
         }
 
@@ -81,17 +91,17 @@ ChatClient *ChatClient::Start(EventSelector *sel, const char *ip, const char *st
     }
     catch(const ExternalError& ex)
     {
-        fprintf(stderr, "%s\nError %d: %s (errno=%s)\n", server_not_connected, ex.GetErrCode(), ex.GetComment(), strerror(ex.GetErrnoCode())); 
+        fprintf(stderr, "Error %d: %s (errno=%s)\n", ex.GetErrCode(), ex.GetComment(), strerror(ex.GetErrnoCode())); 
         return 0;
     }
     catch(const PortInputError& ex)
     {
-        fprintf(stderr, "%s\nError %d: %s (port = %s)\n", server_not_connected, ex.GetErrCode(), ex.GetComment(), ex.GetInvalidPort()); 
+        fprintf(stderr, "Error %d: %s (port = %s)\n", ex.GetErrCode(), ex.GetComment(), ex.GetInvalidPort()); 
         return 0;
     }
     catch(const IpInputError& ex)
     {
-        fprintf(stderr, "%s\nError %d: %s (ip = %s)\n", server_not_connected, ex.GetErrCode(), ex.GetComment(), ex.GetInvalidIp()); 
+        fprintf(stderr, "Error %d: %s (ip = %s)\n", ex.GetErrCode(), ex.GetComment(), ex.GetInvalidIp()); 
         return 0;
     }
 }
@@ -102,10 +112,9 @@ void ChatClient::Handle(bool re, bool we)
         return;
 
     char *buffer = new char[max_line_length + 1];
-    int rc = read(GetFd(), buffer, sizeof(buffer));
+    int rc = read(GetFd(), buffer, max_line_length);
 
-    buffer[rc] = 0;
-
+    buffer[rc - 1] = 0;
     fltk_session->Show(buffer);
 
     delete[] buffer;
@@ -114,15 +123,17 @@ void ChatClient::Handle(bool re, bool we)
 void ChatClient::Send(const char *msg)
 {
     size_t len = strlen(msg);
+    
+    char *m = new char[len + 3];
+    strcpy(m, msg);
+    strcat(m, "\r\n");
 
-    if(len > 0 && msg[len - 1] == '\n')
-    {
-        msg[len - 1] = '\r';
-        msg[len] = '\n';
-        msg[++len] = '\0';
-    } 
+    ssize_t res = write(GetFd(), m, len + 2);
 
-    write(GetFd(), msg, len);
+    if(res <= 0)
+        perror("Failed write");
+
+    delete[] m;
 }
 
 int ChatClient::ValidPort(const char *str_port)
@@ -142,93 +153,70 @@ void ChatClient::ValidIp(const char *ip)
 }
 
 // class FLTKguiSession 
-FLTKguiSession::FLTKguiSession(int fd, F1_Window *win, F1_Text_Buffer *ch_buffer, F1_Text_Display *ch_display, F1_Input *input, F1_Button *send) 
-    : FdHandler(fd, true), window(win), chat_buffer(ch_buffer), chat_display(ch_display), input_field(input), send_button(send)
+FLTKguiSession::FLTKguiSession(int fd, Fl_Window *win, Fl_Text_Buffer *ch_buf, Fl_Text_Display *chat_disp, Fl_Input *inp, Fl_Button *send_but) 
+    : FdHandler(fd, true), window(win), chat_buffer(ch_buf), display(chat_disp), input(inp), send_button(send_but) 
 {
-    chat_display->buffer(chat_buffer);
+    display->buffer(chat_buffer);
+    display->textfont(FL_COURIER);
+    display->textsize(SIZEFONT);
 
-    send_button->callback(SendCallback, (void *)this);
-    input_field->callback(SendCallback, (void *)this);
-    input_field->when(FL_WHEN_ENTER_KEY | FL_WHEN_NOT_CHANGED);
+    send_button->callback(SendCallback, (void*)this);
+    input->when(FL_WHEN_ENTER_KEY | FL_WHEN_NOT_CHANGED);
+    input->callback(SendCallback, (void*)this);
 
     window->end();
     window->show();
+    Fl::wait(0.0);
 } 
 
 FLTKguiSession::~FLTKguiSession()
 {
-    F1::lock();
+    Fl::lock();
 
     if(send_button)
+    {
         delete send_button;
-    if(input_field)
-        delete input_field;
-    if(chat_display)
-        delete chat_display;
+        send_button = 0;
+    }
+    if(input)
+    {
+        delete input;
+        input = 0;
+    }
+    if(display)
+    {
+        delete display;
+        display = 0;
+    }
     if(chat_buffer)
+    {
         delete chat_buffer;
+        chat_buffer = 0;
+    }
     if(window)
+    {
         delete window;
+        window = 0;
+    }
 
-    F1::unlock();
+    Fl::unlock();
 }
 
-FLTKguiSession *FLTKguiSession::Start(int fd)
+FLTKguiSession *FLTKguiSession::Start(Display *display)
 {
-    f1_open_display(fd);
-
-    F1_Window *window = new F1_Window(WIDTH_WINDOW, HEIGTH_WINDOW, "Drachilo");
-    if(!window)
-        return 0;
-
-    F1_Text_Buffer *chat_buffer = new F1_Text_Buffer();
-    if(!chat_buffer)
-    {
-        delete window;
-        return 0;
-    }
-
-    F1_Text_Display *chat_display = new F1_Text_Display(
-        MARGIN_SPACING, 
-        MARGIN_SPACING, 
-        WIDTH_WINDOW - 2 * MARGIN_SPACING, 
-        CHAT_DISPLAY_H);
-    if(!chat_display)
-    {
-        delete chat_buffer;
-        delete window;
-        return 0;
-    }
-
-
-    F1_Input *input_field = new F1_Input(
-        MARGIN_SPACING, 
-        HEIGTH_WINDOW - MARGIN_SPACING - INPUT_FIELD_H, 
-        INPUT_FIELD_W, 
-        INPUT_FIELD_H);
-    if(!input_field)
-    {
-        delete chat_display;
-        delete chat_buffer;
-        delete window;
-        return 0;
-    }
+    int fd = ConnectionNumber(display);
+    fl_open_display(display);
+        
+    Fl_Window *win = new Fl_Window(WINDOW_W, WINDOW_H, "Client chat");                                                                        
+    Fl_Text_Buffer *ch_buf = new Fl_Text_Buffer; 
+    Fl_Text_Display *disp = new Fl_Text_Display(SPACING, SPACING, DISPLAY_W, DISPLAY_H); 
+    Fl_Input *inp = new Fl_Input(SPACING + LABEL_W, DISPLAY_H + SPACING * 2, INPUT_W, INPUT_H, "Text:"); 
+    Fl_Button *send_but = new Fl_Button(SPACING, DISPLAY_H + INPUT_H + SPACING * 3, BUTTON_W, BUTTON_H, "Say it!");
     
-    F1_Button *send_button = new F1_Button(
-        WIDTH_WINDOW - MARGIN_SPACING - BUTTON_W,
-        HEIGTH_WINDOW - MARGIN_SPACING - INPUT_FIELD_H,
-        BUTTON_W,
-        INPUT_FIELD_H);
-    if(!send_button)
-    {
-        delete input_field;
-        delete chat_display;
-        delete chat_buffer;
-        delete window;
+    if(!win || !ch_buf || !disp || !inp || !send_but)
         return 0;
-    }
-                                
-    return new FLTKguiSession(fd, window, chat_buffer, chat_display, input_field, send_button);
+
+    return new FLTKguiSession(fd, win, ch_buf, disp, inp, send_but);
 }
 
 void FLTKguiSession::Handle(bool re, bool we)
@@ -236,40 +224,39 @@ void FLTKguiSession::Handle(bool re, bool we)
     if(!re)
         return;
 
-    F1::lock();
-    while(F1::ready())
-        F1::wait(0.0);
-    F1::unlock();
-
+   Fl::wait(0.0);
 }
 
-void FLTKguiSession::SendCallback(F1_Widget *w, void *data)
+void FLTKguiSession::SendCallback(Fl_Widget *w, void *data)
 {
-    FLTKguiSession *session = (FLTKguiSession *)data;
+    static_cast<FLTKguiSession*>(data)->PrintAndSend();
+}
 
-    const char *message = session->input_field->value();
+void FLTKguiSession::PrintAndSend()
+{
+    const char *message = input->value();
 
+    if(!message)
+        return;
     if(strcmp(message, "exit") == 0)
-        session->the_master->the_selector->BreakLoop();
-    else if(message && strlen(message) > 0)
     {
-        session->the_master->Send(message); 
-        session->input_field->value("");
-        session->take_focus();
+        the_master->the_selector->BreakLoop();
+        return;
     }
+
+    the_master->Send(message); 
+    Show(message);
+    input->value("");
+
 }
 
 void FLTKguiSession::Show(const char *msg)
 {
-    if(!msg || !chat_buffer)
-        return;
-
-    F1::lock();
-
     chat_buffer->append(msg);
     chat_buffer->append("\n");
 
     int lines = chat_buffer->count_lines(0, chat_buffer->length());
-    chat_display->scroll(lines, 0);
-    F1::unlock();
+    display->scroll(lines, 0);
+
+    Fl::flush();
 }

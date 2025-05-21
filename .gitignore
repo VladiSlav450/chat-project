@@ -1,10 +1,16 @@
 # Name file: .gitingnore
 
 *.txt
-*.o
 *.out
 tags
+*.bin
+
 *.swp
 *.swo
 *.swn
+
 *.a
+*.so
+*.o
+*.la
+*.lo
