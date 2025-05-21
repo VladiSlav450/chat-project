@@ -12,7 +12,6 @@ Requirements:
 ```bash
 sudo apt update
 sudo apt install g++ make libfltk1.3-dev
-make
 ```
 2. Project assembly
 ```bash
@@ -36,8 +35,6 @@ Functionality:
 Management:
 
   * Enter the text in the input field and press:
-
-        Enter - send a message
-        "Say it!" button - send a message
-
+    `Enter - send a message
+    `"Say it!" button - send a message
   * exit - shut down the client
