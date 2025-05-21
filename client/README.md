@@ -1,6 +1,6 @@
 TCP Chat Client (C++/FLTK)
 
-![Chat Demo](screenshots/chatt_demo.cd)
+![Chat Demo](screenshots/chatt_demo.gif)
 
 Requirements
 
