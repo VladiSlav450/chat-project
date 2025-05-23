@@ -58,11 +58,11 @@ bool EventSelector::Remove(FdHandler *el)
     {
         if((*tmp)->value == fd)
         {
-            Key_Array *delete_to = *tmp;
-            *tmp = (*tmp)->next;
-            delete delete_to;
-
             fd_array[fd] = 0;
+            Key_Array *delete_to = *tmp;
+
+            *tmp = delete_to->next;
+            delete delete_to;
             if(!mx)
                 return true;
             continue;
@@ -79,20 +79,23 @@ bool EventSelector::Remove(FdHandler *el)
 void EventSelector::Run()
 {
     quit_flag = false;
+
     do {
-        int i;
         fd_set rds, wrs;
+
         FD_ZERO(&rds);
         FD_ZERO(&wrs);
-        for(i = 0; i <= max_fd; i++)
+
+        for(Key_Array *tmp = first; tmp; tmp = tmp->next)
         {
-            if(fd_array[i])
-            {
-                if(fd_array[i]->WantRead())
-                    FD_SET(i, &rds);
-                if(fd_array[i]->WantWrite())
-                    FD_SET(i, &wrs);
-            }
+            int fd_key = tmp->value;
+            FdHandler *handler = fd_array[fd_key];
+
+            if(handler->WantRead())
+                FD_SET(fd_key, &rds);
+
+            if(handler->WantWrite())
+                FD_SET(fd_key, &wrs);
         }
 
         int res = select(max_fd + 1, &rds, &wrs, 0, 0);
@@ -100,19 +103,28 @@ void EventSelector::Run()
         {
             if(errno == EINTR)
                 continue;
-            else 
+            else
                 break;
         }
+
         if(res > 0)
         {
-            for(i = 0; i <= max_fd; i++)
+            Key_Array *tmp = first;
+            while(tmp)
             {
-                if(!fd_array[i])
-                    continue;
-                bool r = FD_ISSET(i, &rds);
-                bool w = FD_ISSET(i, &wrs);
-                if(r || w)
-                    fd_array[i]->Handle(r, w);
+                Key_Array *next = tmp->next;
+
+                int fd_key = tmp->value;
+                FdHandler *handler = fd_array[fd_key];
+
+                if(handler)
+                {
+                    bool r = FD_ISSET(fd_key, &rds);
+                    bool w = FD_ISSET(fd_key, &wrs);
+                    if(r || w)
+                        handler->Handle(r, w);
+                }
+                tmp = next;
             }
         }
     } while(!quit_flag);

@@ -64,28 +64,28 @@ bool EventSelector::Remove(FdHandler *el)
     {
         if((*tmp)->value == fd)
         {
-            Key_Array *delete_to = *tmp;
-            *tmp = (*tmp)->next;
-            delete delete_to;
-
             fd_array[fd] = 0;
+            Key_Array *delete_to = *tmp;
+
+            *tmp = delete_to->next;
+            delete delete_to;
             if(!mx)
                 return true;
             continue;
         }
         if(mx)
         {
-            if((*tmp)->value > max_fd)
+            if((*tmp)->value > max_fd && (*tmp)->value < fd)
                 max_fd = (*(tmp))->value;
         }
-    } 
+    }
     return true;
 }
 
 void EventSelector::Run()
 {
     quit_flag = false;
-    
+
     do {
         fd_set rds, wrs;
 
@@ -96,7 +96,7 @@ void EventSelector::Run()
         {
             int fd_key = tmp->value;
             FdHandler *handler = fd_array[fd_key];
-            
+
             if(handler->WantRead())
                 FD_SET(fd_key, &rds);
 
@@ -109,23 +109,29 @@ void EventSelector::Run()
         {
             if(errno == EINTR)
                 continue;
-            else 
+            else
                 break;
         }
 
         if(res > 0)
         {
-            for(Key_Array *tmp = first; tmp; tmp = tmp->next)
+            Key_Array *tmp = first;
+            while(tmp)
             {
+                Key_Array *next = tmp->next;
+
                 int fd_key = tmp->value;
                 FdHandler *handler = fd_array[fd_key];
 
-                bool r = FD_ISSET(fd_key, &rds);
-                bool w = FD_ISSET(fd_key, &wrs);
-                if(r || w)
-                    handler->Handle(r, w);
+                if(handler)
+                {
+                    bool r = FD_ISSET(fd_key, &rds);
+                    bool w = FD_ISSET(fd_key, &wrs);
+                    if(r || w)
+                        handler->Handle(r, w);
+                }
+                tmp = next;
             }
         }
     } while(!quit_flag);
 }
-

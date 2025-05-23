@@ -94,5 +94,3 @@ bool Checking_the_validity_of_the_IP_value(const char *ip)
 
     return (dots == 3) && digit_in_octet;
 }
-
-#endif
