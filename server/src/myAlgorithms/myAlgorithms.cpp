@@ -1,4 +1,4 @@
-// client/src/myAlgorithms/myAlgorithms.cpp
+// server/src/myAlgorithms/myAlgorithms.cpp
 
 #include <stddef.h>
 #include <sys/types.h>

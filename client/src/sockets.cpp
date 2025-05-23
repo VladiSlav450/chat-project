@@ -75,7 +75,7 @@ bool EventSelector::Remove(FdHandler *el)
         }
         if(mx)
         {
-            if((*tmp)->value > max_fd && (*tmp)->value < fd)
+            if((*tmp)->value > max_fd)
                 max_fd = (*(tmp))->value;
         }
     } 
