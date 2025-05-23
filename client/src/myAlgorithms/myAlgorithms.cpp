@@ -94,4 +94,92 @@ bool Checking_the_validity_of_the_IP_value(const char *ip)
 
     return (dots == 3) && digit_in_octet;
 }
- 
+
+#if 0
+// class SparseArray
+template <class T>
+SparseArray<T>::~SparseArray()
+{
+    while(first)
+    {
+        Item *tmp = first;
+        first = first->next;
+        delete tmp;
+    }
+}
+
+template <class T>
+T SparseArray<T>::operator[](int idx) const 
+{
+    Item *tmp;
+    for(tmp = first; tmp; tmp = tmp->next)
+    {
+        if(tmp->index == idx)
+            return tmp->value;
+    }
+    return defval;
+}
+
+template <class T>
+int SparseArray<T>::NonzeroCount() const 
+{
+    int count = 0;
+    for(Item *tmp = first; tmp; tmp = tmp->next)
+        count++;
+    return count;
+}
+
+// class SparseArray::Interm
+template <class T>
+T& SparseArray<T>::Interm::Provide()
+{
+    Item *tmp;
+    for(tmp = master->first; tmp; tmp = tmp->next)
+        if(tmp->index == index)
+            return tmp->value;
+
+    tmp = new Item;
+    tmp->index = index;
+    tmp->next = master->first;
+    master->first = tmp;
+    return tmp->index;
+}
+
+template <class T>
+void SparseArray<T>::Interm::Remove()
+{
+    Item **tmp;
+    for(tmp = &(master->first); *tmp; tmp = &(*tmp)->next)
+    {
+        if((*tmp)->index == index)
+        {
+            Item *delete_to = *tmp;
+            *tmp = (*tmp)->next;
+            delete delete_to;
+            return;
+        }
+    }
+}
+
+template <class T>
+SparseArray<T>::Interm::operator T()
+{
+    Item *tmp;
+    for(tmp = master->first; tmp; tmp = tmp->next)
+        if(tmp->index == index)
+            return tmp->value;
+
+    return master->defval;
+}
+
+template <class T>
+T SparseArray<T>::Interm::operator=(const T &x)
+{
+    if(x == master->defval)
+        Remove();
+    else
+        Provide() = x;
+    return x;
+}
+
+#endif

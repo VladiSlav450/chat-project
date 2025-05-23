@@ -20,6 +20,10 @@ FLTKguiSession	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp
 Handle	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void ChatClient::Handle(bool re, bool we)$/;"	f	class:ChatClient	typeref:typename:void
 Handle	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void FLTKguiSession::Handle(bool re, bool we)$/;"	f	class:FLTKguiSession	typeref:typename:void
 IpInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^IpInputError::IpInputError(const IpInputError& other) $/;"	f	class:IpInputError
+MyStr	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^    MyStr()$/;"	f	class:MyStr	file:
+MyStr	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^    MyStr(const MyStr &s)$/;"	f	class:MyStr	file:
+MyStr	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^    MyStr(const char *s)$/;"	f	class:MyStr	file:
+MyStr	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^class MyStr$/;"	c	file:
 PortInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^PortInputError::PortInputError(const PortInputError& other) $/;"	f	class:PortInputError
 PrintAndSend	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void FLTKguiSession::PrintAndSend()$/;"	f	class:FLTKguiSession	typeref:typename:void
 Remove	/home/knauf/my_program/cpp/chat_project/client/src/sockets.cpp	/^bool EventSelector::Remove(FdHandler *el)$/;"	f	class:EventSelector	typeref:typename:bool
@@ -33,11 +37,18 @@ Start	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^ChatCl
 Start	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^FLTKguiSession *FLTKguiSession::Start(Display *display)$/;"	f	class:FLTKguiSession	typeref:typename:FLTKguiSession *
 ValidIp	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^void ChatClient::ValidIp(const char *ip)$/;"	f	class:ChatClient	typeref:typename:void
 ValidPort	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^int ChatClient::ValidPort(const char *str_port)$/;"	f	class:ChatClient	typeref:typename:int
+do_assign	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^void do_assign(SparseArray<MyStr> &arr, char *str)$/;"	f	typeref:typename:void
+do_query	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^void do_query(SparseArray<MyStr> &arr, char *str)$/;"	f	typeref:typename:void
 main	/home/knauf/my_program/cpp/chat_project/client/src/main.cpp	/^int main(int argc, char *argv[])$/;"	f	typeref:typename:int
+main	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^int main()$/;"	f	typeref:typename:int
 main	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_myAlgorithms.cpp	/^int main(void)$/;"	f	typeref:typename:int
 operator =	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error& Error::operator=(const Error& other)$/;"	f	class:Error	typeref:typename:Error &
 operator =	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^IpInputError& IpInputError::operator=(const IpInputError& other)$/;"	f	class:IpInputError	typeref:typename:IpInputError &
 operator =	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^PortInputError& PortInputError::operator=(const PortInputError& other)$/;"	f	class:PortInputError	typeref:typename:PortInputError &
+operator =	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^    void operator=(const MyStr& s)$/;"	f	class:MyStr	typeref:typename:void	file:
+operator ==	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^    bool operator==(const MyStr &s) const$/;"	f	class:MyStr	typeref:typename:bool	file:
+p	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^    char *p;$/;"	m	class:MyStr	typeref:typename:char *	file:
+str	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^    const char *str() const  { return p; }$/;"	f	class:MyStr	typeref:typename:const char *	file:
 strdup	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^char *Error::strdup(const char *str)$/;"	f	class:Error	typeref:typename:char *
 ~ChatClient	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^ChatClient::~ChatClient()$/;"	f	class:ChatClient
 ~Error	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^Error::~Error()$/;"	f	class:Error
@@ -45,4 +56,5 @@ strdup	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cp
 ~FLTKguiSession	/home/knauf/my_program/cpp/chat_project/client/src/chatclient.cpp	/^FLTKguiSession::~FLTKguiSession()$/;"	f	class:FLTKguiSession
 ~FdHandler	/home/knauf/my_program/cpp/chat_project/client/src/sockets.cpp	/^FdHandler::~FdHandler()$/;"	f	class:FdHandler
 ~IpInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^IpInputError::~IpInputError()$/;"	f	class:IpInputError
+~MyStr	/home/knauf/my_program/cpp/chat_project/client/src/myAlgorithms/tests_myAlgorithms/test_SparseArray.cpp	/^    ~MyStr() { delete[] p; }$/;"	f	class:MyStr	file:
 ~PortInputError	/home/knauf/my_program/cpp/chat_project/client/src/Exception/exception.cpp	/^PortInputError::~PortInputError()$/;"	f	class:PortInputError

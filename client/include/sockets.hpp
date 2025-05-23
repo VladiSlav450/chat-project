@@ -3,16 +3,24 @@
 #ifndef SOCKETS_HPP
 #define SOCKETS_HPP
 
+#include "myAlgorithms/myAlgorithms.hpp"
+
 class FdHandler;
 
 class EventSelector
 {
-    FdHandler **fd_array;
-    int fd_array_len;
+    SparseArray<FdHandler*> fd_array;
+    struct Key_Array
+    {
+        int value;
+        Key_Array *next;
+    };
+    Key_Array *first;
+
     int max_fd;
     bool quit_flag;
 public:
-    EventSelector() : fd_array(0), quit_flag(false) {}
+    EventSelector() : fd_array(0), first(0), max_fd(-1), quit_flag(false) {}
     ~EventSelector();
 
     void Add(FdHandler *el);
