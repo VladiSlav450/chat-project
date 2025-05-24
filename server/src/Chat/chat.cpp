@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/socket.h>
+
+
 #include "../../include/Chat/chat.hpp"
 
 ChatSession::ChatSession(ChatServer *a_master, int fd) : FdHandler(fd, true), buf_used(0), ignoring(false), name(0), the_master(a_master)
@@ -97,7 +99,9 @@ void ChatSession::CheckLines()
         {
             if(i > 0 && buffer[i - 1] == '\r')
                 buffer[i - 1] = 0;
+
             ProcessLine(buffer);
+
             int rest = buf_used - i - 1;
             memmove(buffer, buffer + i + 1, rest);
             buf_used = rest;
@@ -114,10 +118,12 @@ void ChatSession::ProcessLine(const char *str)
     {
         name = new char[len + 1];
         strcpy(name, str);
+
         char *wmsg = new char[len + sizeof(welcom_msg) + 2];
         sprintf(wmsg, "%s%s\n", welcom_msg, name);
         Send(wmsg);
         delete[] wmsg;
+
         char *emsg = new char[len + sizeof(entered_msg) + 2];
 
         sprintf(emsg, "%s%s\n", name, entered_msg);
@@ -126,13 +132,80 @@ void ChatSession::ProcessLine(const char *str)
         return;
     }
 
-    int nl = strlen(name);
-    char *msg = new char[nl + len + 5];
-    sprintf(msg, "<%s> %s\n", name, str);
+    if(*str == '/')
+    {
+        char *commands = CommandProcessLine(str);
 
-    the_master->SendAll(msg, this);
-    delete[] msg;
+        Send(commands);
+        delete[] commands;
+    }
+    else
+    {
+        int nl = strlen(name);
+        char *msg = new char[nl + len + 5];
+        sprintf(msg, "<%s> %s\n", name, str);
+
+        the_master->SendAll(msg, this);
+        delete[] msg;
+    }
 }
+
+char *ChatSession::CommandProcessLine(const char *str)
+{
+    char *msg;
+
+    if(strcmp(str, "/help") == 0) 
+        msg = Command_Help();                         
+    else if(strcmp(str, "/users") == 0)
+        msg = Command_Number_Users_Online();
+    else if(strcmp(str, "/name_users") == 0)
+        msg = Command_Name_Users_Online();
+    else if(strcmp(str, "/change_name") == 0)
+        msg = Command_Change_Name();
+    else if(strcmp(str, "/quit") == 0)
+        msg = Command_Quit();
+    else
+        msg = Command_Unknown_Command();
+
+    return msg;
+}
+
+char *ChatSession::Command_Help()
+{
+    return strdup(what_commands_are_there);
+}
+
+char *ChatSession::Command_Number_Users_Online()
+{
+    return the_master->GetOnlineUser();
+}
+
+char *ChatSession::Command_Name_Users_Online()
+{
+
+}
+
+char *ChatSession::Command_Change_Name()
+{
+
+}
+
+char *ChatSession::Command_Quit()
+{
+
+}
+
+char *ChatSession::Command_Unkown_Command()
+{
+    return strdup(unknow_command);
+}
+
+char *ChatSession::strdup(const char *str)
+{
+
+}
+
+// class ChatServer
 
 ChatServer *ChatServer::Start(EventSelector *sel, int port)
 {
@@ -188,13 +261,16 @@ void ChatServer::Handle(bool re, bool we)
     
     struct sockaddr_in addr;
     socklen_t len =  sizeof(addr);
+
     sd = accept(GetFd(), (struct sockaddr *) &addr, &len);
     if(sd == -1)
         return;
+
     item *p = new item;
     p->next = first;
     p->s = new ChatSession(this, sd);
     first = p;
+
     the_selector->Add(p->s);
 }
 
@@ -224,3 +300,29 @@ void ChatServer::SendAll(const char *msg, ChatSession *except)
             p->s->Send(msg);
     }
 }
+
+char *ChatServer::GetOnlineUser()
+{
+    size_t len = max_line_length + 1;
+    char *user_online = new char[len];
+    size_t used = 0;
+
+    item *tmp;
+    for(tmp = first; tmp; tmp = tmp->next)
+    {
+        if(used + strlen(tmp->s->name) + 2 > len)
+        {
+            len = len * 2;
+            char *tmp = new char[len];
+            memcpy(tmp, user_online, used);
+            delete[] user_online;
+
+            user_online = tmp;
+        }
+        
+        memcpy(user_online + used, tmp->s->name, strlen(tmp->s->name));
+        user_online[used] = '\n';
+        used += strlen(tmp->s->name) + 1;
+    }
+}
+
