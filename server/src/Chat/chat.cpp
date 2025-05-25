@@ -11,7 +11,7 @@
 
 #include "../../include/Chat/chat.hpp"
 
-ChatSession::ChatSession(ChatServer *a_master, int fd) : FdHandler(fd, true), buf_used(0), ignoring(false), name(0), the_master(a_master)
+ChatSession::ChatSession(ChatServer *a_master, int fd) : FdHandler(fd, true), buf_used(0), ignoring(false), name(0), the_master(a_master), state(fsm_NewConnected)
 {
     Send("Your name please: "); 
 }
@@ -100,7 +100,8 @@ void ChatSession::CheckLines()
             if(i > 0 && buffer[i - 1] == '\r')
                 buffer[i - 1] = 0;
 
-            ProcessLine(buffer);
+            ProcessWithStateMachine(buffer);
+            //ProcessLine(buffer);
 
             int rest = buf_used - i - 1;
             memmove(buffer, buffer + i + 1, rest);
@@ -110,6 +111,42 @@ void ChatSession::CheckLines()
         }
     }
 }
+
+// Предполагается быть вместо ProcessLine
+void ChatWithStateMachine(const char *buffer)
+{
+    switch(current_state)
+    {
+        case fsm_NewConnected:
+            if(!ValidateName(buffer))
+            {
+                Send(invalid_name_msg);
+                return;
+            }
+            SetName(buffer);
+            break;
+
+        case fsm_Normal:
+            if(str[0] == '/')
+                CommandProcessLine(buffer);
+            else
+                SendAll(buffer, this);
+            break;
+
+        case fsm_ChangeName:
+            if(!ValidateName(buffer))
+            {
+                Send(invalid_name_msg);
+                return;
+            }
+            SetName(buffer);
+            break;
+
+        case fsm_Error:
+            // в разработке 
+    }
+}
+
 
 void ChatSession::ProcessLine(const char *str)
 {
@@ -177,12 +214,13 @@ char *ChatSession::Command_Help()
 
 char *ChatSession::Command_Number_Users_Online()
 {
-    return the_master->GetOnlineUser();
+    return the_master->Get_Number_Online();
 }
 
 char *ChatSession::Command_Name_Users_Online()
 {
-
+    
+    return the_master->Get_Name_Online_User();
 }
 
 char *ChatSession::Command_Change_Name()
@@ -200,9 +238,19 @@ char *ChatSession::Command_Unkown_Command()
     return strdup(unknow_command);
 }
 
-char *ChatSession::strdup(const char *str)
+bool ValidateName(const char *buffer)
 {
 
+}
+
+char *ChatSession::strdup(const char *str)
+{
+    if(!str)
+        return 0;
+
+    char result = new char[strlen(str) + 1];
+    strcpy(result, str);
+    return result;
 }
 
 // class ChatServer
@@ -301,28 +349,36 @@ void ChatServer::SendAll(const char *msg, ChatSession *except)
     }
 }
 
-char *ChatServer::GetOnlineUser()
+char *ChatServer::Get_Name_Online_User()
 {
     size_t len = max_line_length + 1;
-    char *user_online = new char[len];
-    size_t used = 0;
+    size_t buf_used = 0;
+    char *buf_user_online = new char[len];
 
     item *tmp;
     for(tmp = first; tmp; tmp = tmp->next)
     {
-        if(used + strlen(tmp->s->name) + 2 > len)
-        {
-            len = len * 2;
-            char *tmp = new char[len];
-            memcpy(tmp, user_online, used);
-            delete[] user_online;
+        if(!tmp->s->name)
+            continue;
 
-            user_online = tmp;
+        size_t name_len = strlen(tmp->s->name);
+
+        if(len < buf_used + name_len + 2)
+        {
+            len = name_len + len * 2;
+            char *tmp = new char[len];
+            memcpy(tmp, buf_user_online, buf_used);
+            delete[] buf_user_online;
+
+            buf_user_online = tmp;
         }
-        
-        memcpy(user_online + used, tmp->s->name, strlen(tmp->s->name));
-        user_online[used] = '\n';
-        used += strlen(tmp->s->name) + 1;
+
+        memcpy(user_online + buf_used, tmp->s->name, name_len);
+        buf_used += name_len;
+        buf_user_online[buf_used++] = '\n';
     }
+
+    buf_user_online[buf_used] = 0;
+    return buf_user_online;
 }
 
