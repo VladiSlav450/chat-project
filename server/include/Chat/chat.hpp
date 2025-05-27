@@ -9,7 +9,9 @@ static const char welcom_msg[] = "Welcom to the Chat! You are known as ";
 static const char entered_msg[] = " has entered the chat";
 static const char left_msg[] = " has left the chat";
 
-static const char new_name_msg[] = "Enter a new name:";
+static const char server_commands[] = "!server command!";
+
+static const char new_name_msg[] = "enter a new name:";
 static const char invalid_name_msg[] = "Invalid name. The name must be less than 10 characters long"
                                        " and contain only letters or numbers."
                                        "Try again:";
@@ -25,9 +27,9 @@ enum {
 };
 
 enum class fsm_ClientState {
-    fsm_NewConnected;
-    fsm_Normal;
-    fsm_ChangeName;
+    fsm_NewConnected,
+    fsm_Normal,
+    fsm_ChangeName
 };
 
 class ChatServer;
@@ -52,9 +54,9 @@ class ChatSession : FdHandler
     void ReadAndIgnore();
     void ReadAndCheck();
     void CheckLines();
-    void ProcessChatWithMachinState();
+    void ProcessChatWithMachinState(const char *str);
 
-    void ProcessLine(const char *str);
+//    void ProcessLine(const char *str);
 
     virtual void Handle(bool re, bool we);
 
@@ -89,9 +91,9 @@ public:
 
     void SendAll(const char *msg, ChatSession *except = 0);
 
-    const char *GetNumberUsersOnline();
+    char *GetNumberUsersOnline();
     char *GetNameUsersOnline();
-    const char *IsNameUnique(const char *newname);
+    const char *IsNameUnique(const char *str);
 private:
     virtual void Handle(bool re, bool we);
 };
