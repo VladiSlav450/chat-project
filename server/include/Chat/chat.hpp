@@ -9,9 +9,14 @@ static const char welcom_msg[] = "Welcom to the Chat! You are known as ";
 static const char entered_msg[] = " has entered the chat";
 static const char left_msg[] = " has left the chat";
 
-static const char invalid_name_msg[] = "Invalid name. Try again:\n";
-static const char what_commands_are_there[] =  "Commands: /help /users /name_users /change_name /quit";
-static const char unknow_command[] = "Unknow command. Write /help for commands list."; 
+static const char new_name_msg[] = "Enter a new name:";
+static const char invalid_name_msg[] = "Invalid name. The name must be less than 10 characters long"
+                                       " and contain only letters or numbers."
+                                       "Try again:";
+static const char name_already_take_msg[] = "Name already take. Choose another.";                                       
+
+static const char what_commands_are_there[] =  "available commands: /help /users /name_users /change_name /quit";
+static const char unknow_command_msg[] = "unknow command. Write /help for commands list."; 
 
 
 enum {
@@ -23,7 +28,6 @@ enum class fsm_ClientState {
     fsm_NewConnected;
     fsm_Normal;
     fsm_ChangeName;
-    fsm_Error;
 };
 
 class ChatServer;
@@ -48,22 +52,18 @@ class ChatSession : FdHandler
     void ReadAndIgnore();
     void ReadAndCheck();
     void CheckLines();
-    void ProcessWithMachinState();
+    void ProcessChatWithMachinState();
+
     void ProcessLine(const char *str);
 
     virtual void Handle(bool re, bool we);
 
+    void WelcomAndEnteredMsgAndSetName(const char *str);
     void CommandProcessLine(const char *str);
-    void SetName(const char *buffer);
+    void SetName(const char *name);
+    void DisconnectedClient();
 
-    bool ValidateName(const char *buffer);
-
-    char *Command_Help();
-    char *Command_Number_Users_Online();
-    char *Command_Name_Users_Online();
-    char *Command_Change_Name();
-    char *Command_Quit();
-    char *Command_Unkown_Command();
+    const char *ValidateName(const char *name);
     
     static char *strdup(const char *str);
 };
@@ -88,7 +88,10 @@ public:
     void RemoveSession(ChatSession *s);
 
     void SendAll(const char *msg, ChatSession *except = 0);
-    char *Get_Name_Online_User();
+
+    const char *GetNumberUsersOnline();
+    char *GetNameUsersOnline();
+    const char *IsNameUnique(const char *newname);
 private:
     virtual void Handle(bool re, bool we);
 };

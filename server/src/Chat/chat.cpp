@@ -73,15 +73,7 @@ void ChatSession::ReadAndCheck()
     int rc = read(GetFd(), buffer + buf_used, sizeof(buffer) - buf_used);
     if(rc < 1)
     {
-        if(name)
-        {
-            int len = strlen(name);
-            char *lmsg = new char[len + sizeof(left_msg) + 2];
-            sprintf(lmsg, "%s%s\n", name, left_msg);
-            the_master->SendAll(lmsg, this);
-            delete[] lmsg;
-        }
-        the_master->RemoveSession(this);
+        DisconnectedClient();
         return;
     }
     buf_used += rc;
@@ -100,7 +92,7 @@ void ChatSession::CheckLines()
             if(i > 0 && buffer[i - 1] == '\r')
                 buffer[i - 1] = 0;
 
-            ProcessWithStateMachine(buffer);
+            ProcessChatWithMachinState(buffer);
             //ProcessLine(buffer);
 
             int rest = buf_used - i - 1;
@@ -113,41 +105,42 @@ void ChatSession::CheckLines()
 }
 
 // Предполагается быть вместо ProcessLine
-void ChatWithStateMachine(const char *buffer)
+void ChatSession::ProcessChatWithMachinState(const char *str)
 {
     switch(current_state)
     {
         case fsm_NewConnected:
-            if(!ValidateName(buffer))
+            const char *error;
+            if(error = ValidateName(str))
             {
-                Send(invalid_name_msg);
-                return;
+                Send(error);
+                break;
             }
-            SetName(buffer);
+            WelcomAndEnteredMsgAndSetName(str);
+            current_state = fsm_Normal;
             break;
 
         case fsm_Normal:
             if(str[0] == '/')
-                CommandProcessLine(buffer);
+                CommandProcessLine(str);
             else
-                SendAll(buffer, this);
+                SendAll(str, this);
             break;
 
         case fsm_ChangeName:
-            if(!ValidateName(buffer))
+            const char *error;
+            if(error = ValidateName(str))
             {
-                Send(invalid_name_msg);
-                return;
+                Send(error);
+                break;
             }
-            SetName(buffer);
+            SetName(str);
+            current_state = fsm_Normal;
             break;
-
-        case fsm_Error:
-            // в разработке 
     }
 }
 
-
+#if 0
 void ChatSession::ProcessLine(const char *str)
 {
     int len = strlen(str);
@@ -186,61 +179,102 @@ void ChatSession::ProcessLine(const char *str)
         delete[] msg;
     }
 }
+#endif
 
-char *ChatSession::CommandProcessLine(const char *str)
+void ChatSession::CommandProcessLine(const char *str)
 {
-    char *msg;
+    int nl = strlen(name);
+    char *buf = 0;
 
     if(strcmp(str, "/help") == 0) 
-        msg = Command_Help();                         
+        buf = new char[nl + strlen(what_commands_are_there) + 4];
+        sprintf(buf, "%s, %s\n", name, what_commands_are_there);
+        Send(buf);                         
     else if(strcmp(str, "/users") == 0)
-        msg = Command_Number_Users_Online();
+    {
+        buf = the_master->GetNumberUsersOnline();
+        Send(buf);
+    }
     else if(strcmp(str, "/name_users") == 0)
-        msg = Command_Name_Users_Online();
+    {
+        buf = the_master->GetNameUsersOnline();
+        Send(buf);
+    }
     else if(strcmp(str, "/change_name") == 0)
-        msg = Command_Change_Name();
+    {
+        buf = new char[nl, strlen(
+        Send(new_name_msg);
+        current_state = fsm_ChangeName; 
+    }
     else if(strcmp(str, "/quit") == 0)
-        msg = Command_Quit();
+        DisconnectedClient();
     else
-        msg = Command_Unknown_Command();
+        buf = new char[nl + strlen(unknown_command_msg) + 4];
+        sprintf(buf, "%s, %s\n", name, unknown_command_msg);
+        Send(buf);
 
-    return msg;
+    if(buf)
+        delete[] buf;
+
 }
 
-char *ChatSession::Command_Help()
+void ChatSession::DisconnectedClient()
 {
-    return strdup(what_commands_are_there);
+    if(name)
+    {
+        int len = strlen(name);
+        char *lmsg = new char[len + sizeof(left_msg) + 2];
+        sprintf(lmsg, "%s%s\n", name, left_msg);
+        the_master->SendAll(lmsg, this);
+        delete[] lmsg;
+    }
+    the_master->RemoveSession(this);
 }
 
-char *ChatSession::Command_Number_Users_Online()
+void ChatSession::SetName(const char *str)
 {
-    return the_master->Get_Number_Online();
-}
-
-char *ChatSession::Command_Name_Users_Online()
-{
+    if(!str)
+        return;
     
-    return the_master->Get_Name_Online_User();
+    if(name)
+        delete[] name;
+    name = new char[strlen(str) + 1];
+    strcpy(name, str);
 }
 
-char *ChatSession::Command_Change_Name()
+void ChatSession::WelcomAndEnteredMsgAndSetName(const char *str)
 {
+    SetName(str);
+    size_t len = strlen(str);
+    char *wmsg = new char[len + sizeof(welcom_msg) + 2];
+    sprintf(wmsg, "%s%s\n", welcom_msg, name);
+    Send(wmsg);
+    delete[] wmsg;
 
+    char *emsg = new char[len + sizeof(entered_msg) + 2];
+
+    sprintf(emsg, "%s%s\n", name, entered_msg);
+    the_master->SendAll(emsg, this);
+    delete[] emsg;
 }
 
-char *ChatSession::Command_Quit()
+const char *ChatSession::ValidateName(const char *str)
 {
+    size_t len = strlen(str);
 
-}
+    if(len > 10)
+        return invalid_name_msg;
 
-char *ChatSession::Command_Unkown_Command()
-{
-    return strdup(unknow_command);
-}
+    const char *already_name;
+    if(already_name = the_master->IsNameUnique(str))
+        return already_name;
 
-bool ValidateName(const char *buffer)
-{
+    size_t i;
+    for(i = 0; i < len; i++)
+        if((str[i] < '0' || (str[i] > '9' && str[i] < 'A') || (str[i] > 'Z' && str[i] < 'a') || str[i] > 'z'))  
+            return invalid_name_msg;
 
+    return 0;
 }
 
 char *ChatSession::strdup(const char *str)
@@ -349,7 +383,12 @@ void ChatServer::SendAll(const char *msg, ChatSession *except)
     }
 }
 
-char *ChatServer::Get_Name_Online_User()
+const char *GetNumberUsersOnline()
+{
+
+}
+
+char *ChatServer::GetNameUsersOnlien()
 {
     size_t len = max_line_length + 1;
     size_t buf_used = 0;
@@ -380,5 +419,10 @@ char *ChatServer::Get_Name_Online_User()
 
     buf_user_online[buf_used] = 0;
     return buf_user_online;
+}
+
+const char *IsNameUnique(const char *newname)
+{
+
 }
 
