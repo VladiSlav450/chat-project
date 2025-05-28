@@ -11,7 +11,10 @@
 
 #include "../../include/Chat/chat.hpp"
 
-ChatSession::ChatSession(ChatServer *a_master, int fd) : FdHandler(fd, true), buf_used(0), ignoring(false), name(0), the_master(a_master), current_state(fsm_ClientState::fsm_NewConnected)
+ChatSession::ChatSession(ChatServer *a_master, int fd) 
+    : FdHandler(fd, true), buf_used(0), ignoring(false), name(0)
+    , the_master(a_master), current_state(fsm_ClientState::fsm_NewConnected)
+    , need_to_delete(false)
 {
     Send("Your name please: "); 
 }
@@ -40,6 +43,9 @@ void ChatSession::Handle(bool re, bool we)
         ReadAndIgnore();
     else
         ReadAndCheck();
+
+    if(need_to_delete)
+        DisconnectedClient();
 }
 
 void ChatSession::ReadAndIgnore()
@@ -47,7 +53,7 @@ void ChatSession::ReadAndIgnore()
     int rc = read(GetFd(), buffer, sizeof(buffer));
     if(rc < 1)
     {
-        the_master->RemoveSession(this);
+        need_to_delete = true;
         return;
     }
 
@@ -73,7 +79,7 @@ void ChatSession::ReadAndCheck()
     int rc = read(GetFd(), buffer + buf_used, sizeof(buffer) - buf_used);
     if(rc < 1)
     {
-        DisconnectedClient();
+        need_to_delete = true; 
         return;
     }
     buf_used += rc;
@@ -82,6 +88,29 @@ void ChatSession::ReadAndCheck()
 
 void ChatSession::CheckLines()
 {
+    while(buf_used > 0 && !need_to_delete)
+    {
+        int i;
+        for(i = 0; i < buf_used; i++)
+        {
+            if(buffer[i] == '\n')
+            {
+                if(i > 0 && buffer[i - 1] == '\r')
+                    buffer[i - 1] = 0;
+
+                ProcessChatWithMachinState(buffer);
+                if(need_to_delete)
+                    break;
+
+                int rest = buf_used - i - 1;
+                memmove(buffer, buffer + i + 1, rest);
+                buf_used = rest;
+                break;
+            }
+        }
+    }
+
+/*
     if(buf_used < 0)
         return;
     int i;
@@ -93,6 +122,8 @@ void ChatSession::CheckLines()
                 buffer[i - 1] = 0;
 
             ProcessChatWithMachinState(buffer);
+            if(need_to_delete)
+                return;
             //ProcessLine(buffer);
 
             int rest = buf_used - i - 1;
@@ -102,6 +133,7 @@ void ChatSession::CheckLines()
             return;
         }
     }
+*/
 }
 
 // Предполагается быть вместо ProcessLine
@@ -113,12 +145,13 @@ void ChatSession::ProcessChatWithMachinState(const char *str)
             if(const char *error = ValidateName(str))
             {
                 Send(error);
-                break;
             }
-            WelcomAndEnteredMsgAndSetName(str);
-            current_state = fsm_ClientState::fsm_Normal;
+            else
+            {
+                WelcomAndEnteredMsgAndSetName(str);
+                current_state = fsm_ClientState::fsm_Normal;
+            }
             break;
-
         case fsm_ClientState::fsm_Normal:
             if(str[0] == '/')
                 CommandProcessLine(str);
@@ -131,15 +164,16 @@ void ChatSession::ProcessChatWithMachinState(const char *str)
                 delete[] msg;
             }
             break;
-
         case fsm_ClientState::fsm_ChangeName:
             if(const char *error = ValidateName(str))
             {
                 Send(error);
-                break;
             }
-            SetName(str);
-            current_state = fsm_ClientState::fsm_Normal;
+            else
+            {
+                SetName(str);
+                current_state = fsm_ClientState::fsm_Normal;
+            }
             break;
     }
 }
@@ -193,7 +227,7 @@ void ChatSession::CommandProcessLine(const char *str)
 
     if(strcmp(str, "/help") == 0) 
     {
-        size_t needed = serv_com + nl + strlen(what_commands_are_there) + 5;
+        size_t needed = serv_com + nl + sizeof(what_commands_are_there) + 5;
         buf = new char[needed];
         snprintf(buf, needed, "%s %s, %s\n", server_commands, name, what_commands_are_there);
         Send(buf);                         
@@ -210,18 +244,18 @@ void ChatSession::CommandProcessLine(const char *str)
     }
     else if(strcmp(str, "/change_name") == 0)
     {
-        buf = new char[serv_com + nl + strlen(new_name_msg) + 5];
+        buf = new char[serv_com + nl + sizeof(new_name_msg) + 5];
         sprintf(buf, "%s %s, %s\n", server_commands, name, new_name_msg); 
         Send(buf);
         current_state = fsm_ClientState::fsm_ChangeName; 
     }
     else if(strcmp(str, "/quit") == 0)
     {
-        DisconnectedClient();
+        need_to_delete = true;
     }
     else
     {
-        buf = new char[serv_com + nl + strlen(unknow_command_msg) + 5];
+        buf = new char[serv_com + nl + sizeof(unknow_command_msg) + 5];
         sprintf(buf, "%s %s, %s\n", server_commands, name, unknow_command_msg);
         Send(buf);
     }
@@ -243,17 +277,6 @@ void ChatSession::DisconnectedClient()
     the_master->RemoveSession(this);
 }
 
-void ChatSession::SetName(const char *str)
-{
-    if(!str)
-        return;
-    
-    if(name)
-        delete[] name;
-    name = new char[strlen(str) + 1];
-    strcpy(name, str);
-}
-
 void ChatSession::WelcomAndEnteredMsgAndSetName(const char *str)
 {
     SetName(str);
@@ -268,6 +291,16 @@ void ChatSession::WelcomAndEnteredMsgAndSetName(const char *str)
     sprintf(emsg, "%s%s\n", name, entered_msg);
     the_master->SendAll(emsg, this);
     delete[] emsg;
+}
+
+void ChatSession::SetName(const char *str)
+{
+    if(!str)
+        return;
+    
+    if(name)
+        delete[] name;
+    name = strdup(str);
 }
 
 const char *ChatSession::ValidateName(const char *str)
@@ -436,7 +469,6 @@ char *ChatServer::GetNameUsersOnline()
     {
         if(!tmp->s->name)
             continue;
-
         no_users = true;
         size_t name_len = strlen(tmp->s->name);
 
@@ -456,8 +488,8 @@ char *ChatServer::GetNameUsersOnline()
     }
     if(!no_users)
     {
-        memcpy(buf_user_online + buf_used, "here no users(", 15);
-        return buf_user_online;
+        strcpy(buf_user_online + buf_used, "here no users(\n");
+        buf_used += 15;
     }
     buf_user_online[buf_used] = 0;
     return buf_user_online;

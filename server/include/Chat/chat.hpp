@@ -9,13 +9,13 @@ static const char welcom_msg[] = "Welcom to the Chat! You are known as ";
 static const char entered_msg[] = " has entered the chat";
 static const char left_msg[] = " has left the chat";
 
-static const char server_commands[] = "!server command!";
+static const char server_commands[] = "<server command>";
 
 static const char new_name_msg[] = "enter a new name:";
 static const char invalid_name_msg[] = "Invalid name. The name must be less than 10 characters long"
                                        " and contain only letters or numbers."
-                                       "Try again:";
-static const char name_already_take_msg[] = "Name already take. Choose another.";                                       
+                                       "Try again:\n";
+static const char name_already_take_msg[] = "Name already take. Choose another.\n";                                       
 
 static const char what_commands_are_there[] =  "available commands: /help /users /name_users /change_name /quit";
 static const char unknow_command_msg[] = "unknow command. Write /help for commands list."; 
@@ -45,6 +45,7 @@ class ChatSession : FdHandler
     ChatServer *the_master;
 
     fsm_ClientState current_state;
+    bool need_to_delete;
 
     ChatSession(ChatServer *a_master, int fd);
     ~ChatSession();

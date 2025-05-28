@@ -3,6 +3,8 @@
 #include <cerrno>
 #include <sys/select.h>
 #include <unistd.h>
+  
+
 #include "../../include/Sockets/sockets.hpp"
 
 
@@ -53,15 +55,15 @@ bool EventSelector::Remove(FdHandler *el)
         mx = true;
     }
 
-    Key_Array **tmp;
-    for(tmp = &first; *tmp; tmp = &(*tmp)->next)
+    fd_array[fd] = 0;
+
+    Key_Array **tmp = &first;
+    while(*tmp)
     {
         if((*tmp)->value == fd)
         {
-            fd_array[fd] = 0;
             Key_Array *delete_to = *tmp;
-
-            *tmp = delete_to->next;
+            *tmp = delete_to->next;    
             delete delete_to;
             if(!mx)
                 return true;
@@ -72,6 +74,7 @@ bool EventSelector::Remove(FdHandler *el)
             if((*tmp)->value > max_fd && (*tmp)->value < fd)
                 max_fd = (*(tmp))->value;
         }
+        tmp = &((*tmp)->next);
     }
     return true;
 }
@@ -113,7 +116,6 @@ void EventSelector::Run()
             while(tmp)
             {
                 Key_Array *next = tmp->next;
-
                 int fd_key = tmp->value;
                 FdHandler *handler = fd_array[fd_key];
 
