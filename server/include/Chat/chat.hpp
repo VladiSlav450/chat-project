@@ -32,11 +32,30 @@ enum class fsm_ClientState {
     fsm_ChangeName
 };
 
-class ChatServer;
 
-class ChatSession : FdHandler
+class ChatServer : public FdHandler 
 {
-    friend class ChatServer;
+    EventSelector *the_selector;
+    int **worker_pipes_channel;
+    int next_worker;
+
+    ChatServer(EventSelector *sel, int fd, int **worker_pipes_channel); 
+    
+public:
+    ~ChatServer();
+
+    static ChatServer *Start(EventSelector *sel, int port, int **worker_pipes_channel);
+
+private:
+    virtual void Handle(bool re, bool we);
+};
+
+
+
+class ClientSession : FdHandler
+{
+    
+    friend class WorkerServer;
 
     char buffer[max_line_length + 1];
     int buf_used;
@@ -47,8 +66,8 @@ class ChatSession : FdHandler
     fsm_ClientState current_state;
     bool need_to_delete;
 
-    ChatSession(ChatServer *a_master, int fd);
-    ~ChatSession();
+    ClientSession(ChatServer *a_master, int fd);
+    ~ClientSession();
 
     void Send(const char *msg);
 
@@ -71,32 +90,28 @@ class ChatSession : FdHandler
     static char *strdup(const char *str);
 };
 
-class ChatServer : public FdHandler 
+class WorkerServer : public FdHandler
 {
     EventSelector *the_selector;
-    struct item 
+    struct item
     {
-        ChatSession *s;
-        item *next; 
-    };
+        ClientSession *s;
+        item *next;
+    }
     item *first;
-
-    ChatServer(EventSelector *sel, int fd); 
-    
 public:
-    ~ChatServer();
+    WorkerServer(EventSelector *sel, int fd);
+    ~WorkerServer();
 
-    static ChatServer *Start(EventSelector *sel, int port);
+    void RemoveSession(ClientSession *s);
 
-    void RemoveSession(ChatSession *s);
+/*  Тут ещё должны быть мктоды 
+ *  для отправки количестов в онлайне, кто они,
+ *  void SendAll(const char *msg, ClinetSession *except);
+ */
 
-    void SendAll(const char *msg, ChatSession *except = 0);
-
-    char *GetNumberUsersOnline();
-    char *GetNameUsersOnline();
-    const char *IsNameUnique(const char *str);
 private:
-    virtual void Handle(bool re, bool we);
-};
+    virtual void Handle(bool r, bool w);
+}
 
 #endif // CHAT_HPP

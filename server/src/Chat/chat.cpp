@@ -11,7 +11,7 @@
 
 #include "../../include/Chat/chat.hpp"
 
-ChatSession::ChatSession(ChatServer *a_master, int fd) 
+ClientSession::ClientSession(ChatServer *a_master, int fd) 
     : FdHandler(fd, true), buf_used(0), ignoring(false), name(0)
     , the_master(a_master), current_state(fsm_ClientState::fsm_NewConnected)
     , need_to_delete(false)
@@ -19,18 +19,18 @@ ChatSession::ChatSession(ChatServer *a_master, int fd)
     Send("Your name please: "); 
 }
 
-ChatSession::~ChatSession()
+ClientSession::~ClientSession()
 {
     if(name)
         delete[] name;
 }
 
-void ChatSession::Send(const char *msg)
+void ClientSession::Send(const char *msg)
 {
     write(GetFd(), msg, strlen(msg));    
 }
 
-void ChatSession::Handle(bool re, bool we)
+void ClientSession::Handle(bool re, bool we)
 {
     if(!re)
         return;
@@ -48,7 +48,7 @@ void ChatSession::Handle(bool re, bool we)
         DisconnectedClient();
 }
 
-void ChatSession::ReadAndIgnore()
+void ClientSession::ReadAndIgnore()
 {
     int rc = read(GetFd(), buffer, sizeof(buffer));
     if(rc < 1)
@@ -74,7 +74,7 @@ void ChatSession::ReadAndIgnore()
     } 
 }
 
-void ChatSession::ReadAndCheck()
+void ClientSession::ReadAndCheck()
 {
     int rc = read(GetFd(), buffer + buf_used, sizeof(buffer) - buf_used);
     if(rc < 1)
@@ -86,7 +86,7 @@ void ChatSession::ReadAndCheck()
     CheckLines();
 }
 
-void ChatSession::CheckLines()
+void ClientSession::CheckLines()
 {
     while(buf_used > 0 && !need_to_delete)
     {
@@ -137,7 +137,7 @@ void ChatSession::CheckLines()
 }
 
 // Предполагается быть вместо ProcessLine
-void ChatSession::ProcessChatWithMachinState(const char *str)
+void ClientSession::ProcessChatWithMachinState(const char *str)
 {
     switch(current_state)
     {
@@ -179,7 +179,7 @@ void ChatSession::ProcessChatWithMachinState(const char *str)
 }
 
 #if 0
-void ChatSession::ProcessLine(const char *str)
+void ClientSession::ProcessLine(const char *str)
 {
     int len = strlen(str);
     if(!name)
@@ -219,7 +219,7 @@ void ChatSession::ProcessLine(const char *str)
 }
 #endif
 
-void ChatSession::CommandProcessLine(const char *str)
+void ClientSession::CommandProcessLine(const char *str)
 {
     int nl = strlen(name);
     int serv_com = strlen(server_commands);
@@ -264,7 +264,7 @@ void ChatSession::CommandProcessLine(const char *str)
         delete[] buf;
 }
 
-void ChatSession::DisconnectedClient()
+void ClientSession::DisconnectedClient()
 {
     if(name)
     {
@@ -277,7 +277,7 @@ void ChatSession::DisconnectedClient()
     the_master->RemoveSession(this);
 }
 
-void ChatSession::WelcomAndEnteredMsgAndSetName(const char *str)
+void ClientSession::WelcomAndEnteredMsgAndSetName(const char *str)
 {
     SetName(str);
     size_t len = strlen(str);
@@ -293,7 +293,7 @@ void ChatSession::WelcomAndEnteredMsgAndSetName(const char *str)
     delete[] emsg;
 }
 
-void ChatSession::SetName(const char *str)
+void ClientSession::SetName(const char *str)
 {
     if(!str)
         return;
@@ -303,7 +303,7 @@ void ChatSession::SetName(const char *str)
     name = strdup(str);
 }
 
-const char *ChatSession::ValidateName(const char *str)
+const char *ClientSession::ValidateName(const char *str)
 {
     size_t len = strlen(str);
 
@@ -321,7 +321,7 @@ const char *ChatSession::ValidateName(const char *str)
     return 0;
 }
 
-char *ChatSession::strdup(const char *str)
+char *ClientSession::strdup(const char *str)
 {
     if(!str)
         return 0;
@@ -333,7 +333,7 @@ char *ChatSession::strdup(const char *str)
 
 // class ChatServer
 
-ChatServer *ChatServer::Start(EventSelector *sel, int port)
+ChatServer *ChatServer::Start(EventSelector *sel, int port, int **worker_pipes_channel)
 {
     int ls, opt, res;
     struct sockaddr_in addr;
@@ -356,26 +356,17 @@ ChatServer *ChatServer::Start(EventSelector *sel, int port)
         return 0;
     } 
     listen(ls, qlen_for_listen);
-    return new ChatServer(sel, ls);
+    return new ChatServer(sel, ls, worker_pipes_channel);
 }
 
-ChatServer::ChatServer(EventSelector *sel, int fd) : FdHandler(fd, true),  the_selector(sel), first(0)
+ChatServer::ChatServer(EventSelector *sel, int fd, int **worker_pipes) 
+    : FdHandler(fd, true),  the_selector(sel), worker_pipes_channel(worker_pipes), next_worker(0) 
 {
     the_selector->Add(this);    
 }
 
 ChatServer::~ChatServer()
 {
-    while(first)
-    {
-        item *tmp = first;
-        first = first->next;
-
-        the_selector->Remove(tmp->s);
-
-        delete tmp->s;
-        delete tmp;
-    } 
     the_selector->Remove(this);
 }
 
@@ -392,15 +383,16 @@ void ChatServer::Handle(bool re, bool we)
     if(sd == -1)
         return;
 
-    item *p = new item;
-    p->next = first;
-    p->s = new ChatSession(this, sd);
-    first = p;
-
-    the_selector->Add(p->s);
+    char *buffer_socket_client = new char[5];
+    sprintf(buffer_socket_client, sizeof(buffer_socket_client), "%d", sd);
+    int work_pipe = worker_pipes_channel[next_worker][1];
+    next_worker = (next_worker + 1) % 3;
+    write(next_worker, buffer_socket_client, strlen(buf_user_online));
+    delete[] buffer_socket_client;
+    close(sd);
 }
 
-void ChatServer::RemoveSession(ChatSession *s)
+void ChatServer::RemoveSession(ClientSession *s)
 {
     the_selector->Remove(s);
     item **p;
@@ -417,7 +409,7 @@ void ChatServer::RemoveSession(ChatSession *s)
     }
 }
 
-void ChatServer::SendAll(const char *msg, ChatSession *except)
+void ChatServer::SendAll(const char *msg, ClientSession *except)
 {
     item *p;
     for(p = first; p; p = p->next)
@@ -507,5 +499,76 @@ const char *ChatServer::IsNameUnique(const char *str)
             return name_already_take_msg;        
     } 
     return 0;
+}
+
+
+
+// Функции и классы для рабочих процессов
+
+void worker_func_main(int worker_pipes)
+{
+    EventSelector *selector = new EventSelector;  
+    WorkerServer *workserv = new WorkerServer(selector, worker_pipes);
+
+    selector->Run();
+}
+
+WorkerServer::WorkerServer(EventSelector *sel, int server_fd) : 
+    FdHandler(serve_fd, true), the_selector(sel), first(0)
+{
+    the_selector->Add(this); 
+}
+
+WorkerServer::~WorkerServer()
+{
+    while(first)
+    {
+        item *tmp = first;
+        first = fist->next;
+
+        the_selector->Remove(tmp->s);
+        delete tmp->s;
+        delete tmp;
+    } 
+    the_selector->Remove(this);
+}
+
+void WorkerServer::RemoveSession(ClientSession *s)
+{
+    the_selector->Remove(s);
+    item **p;
+    for(p = &first; *p; p = &((*p)->next))
+    {
+        if((*p)->s == s)
+        {
+            item *tmp = *p;
+            *p = tmp->next;
+            delete tmp->s;
+            delete tmp;
+            return;
+        }
+    }
+}
+
+void WorkerServer::Handle(bool r, bool w)
+{
+    if(!r)
+        return;
+
+    int sd + ;
+    int res;
+    int i;
+
+    char *msgfromserv = new char[5];
+    res = read(GetFd(), msgfromserv, sizeof(msgfromserv)); 
+    msgfromserv[res] = 0;
+    for(i = 0; msgfromserv[i]; i++)
+        sd = sd * 10 + msgfromserv[i] - 48;
+    itme *p = new item;
+    p->next = first;
+    p->s = new ClientSession(this, sd);
+    first = p;
+
+    the_selector->Add(p->s);
 }
 
