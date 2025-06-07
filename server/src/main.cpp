@@ -2,6 +2,10 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+
 #include "../include/Chat/chat.hpp"
 #include "../include/Sockets/sockets.hpp"
 
@@ -9,37 +13,43 @@ static int the_server_port = 7777;
 
 int main()
 {
-    int worker_pipes[3][2];
-    int worker_pides[3];
+    int pipes[WORKERS_COUNT][STREAMS_COUNT]; // [0] - read, [1] - write
+    int worker_pids[WORKERS_COUNT];
 
     int i;
-    for(i = 0; i < 3; i++)
+    for(i = 0; i < WORKERS_COUNT; i++)
     {
-        if(pipe(worker_pipes[i]) == -1)
+        if(pipe(pipes[i]) == -1)
         {
             perror("pipe failed");
             exit(EXIT_FAILURE);
         }
-
-        worker_pides[i] = fork();
-        if(worker_pides[i] == -1)
+        close(pipes[i][READ]);
+    }
+   for(i = 0; i < WORKERS_COUNT; i++)
+    {
+        worker_pids[i] = fork();
+        if(worker_pids[i] == -1)
         {
             perror("fork failed");
-            exit(EXIT_FAILURE): 
+            exit(EXIT_FAILURE); 
         }
 
-        if(worker_pides[i] == 0)
+        if(worker_pids[i] == 0)
         {
-            // Тут порождённый процесс сам создаёт клиенетаские сесси и отслеживает их
-            worker_func_main(worker_pipes[i][0]); 
+            close(pipes[i][WRITE]);
+            int j;
+            for(j = 0; j < WORKERS_COUNT; j++)
+                if(j != i)
+                    close(pipes[i][READ]); 
+            close(pipes[i][WRITE]);
+            WorkerServer::worker_func_main(i, pipes); 
             exit(0);
         }
-        else
-            close(worker_pides[i][0]);
     }
 
     EventSelector *selector = new EventSelector;
-    ChatServer *server = ChatServer::Start(selector, the_server_port, worker_pipes);
+    ChatServer *server = ChatServer::Start(selector, the_server_port, pipes);
     if(!server)
     {
         perror("server start failed");

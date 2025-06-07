@@ -3,6 +3,13 @@
 #ifndef CHAT_HPP
 #define CHAT_HPP
 
+#define STAR_VERSION_WHISOUT_PROCCES 0
+
+#define WORKERS_COUNT 3
+#define STREAMS_COUNT 2
+#define READ 0
+#define WRITE 1
+
 #include "../Sockets/sockets.hpp"
 
 static const char welcom_msg[] = "Welcom to the Chat! You are known as ";
@@ -33,24 +40,8 @@ enum class fsm_ClientState {
 };
 
 
-class ChatServer : public FdHandler 
-{
-    EventSelector *the_selector;
-    int **worker_pipes_channel;
-    int next_worker;
-
-    ChatServer(EventSelector *sel, int fd, int **worker_pipes_channel); 
-    
-public:
-    ~ChatServer();
-
-    static ChatServer *Start(EventSelector *sel, int port, int **worker_pipes_channel);
-
-private:
-    virtual void Handle(bool re, bool we);
-};
-
-
+class WorkerServer;
+class ChatServer;
 
 class ClientSession : FdHandler
 {
@@ -61,7 +52,7 @@ class ClientSession : FdHandler
     int buf_used;
     bool ignoring;
     char *name;
-    ChatServer *the_master;
+    WorkerServer *the_master;
 
     fsm_ClientState current_state;
     bool need_to_delete;
@@ -76,8 +67,6 @@ class ClientSession : FdHandler
     void CheckLines();
     void ProcessChatWithMachinState(const char *str);
 
-//    void ProcessLine(const char *str);
-
     virtual void Handle(bool re, bool we);
 
     void WelcomAndEnteredMsgAndSetName(const char *str);
@@ -90,6 +79,25 @@ class ClientSession : FdHandler
     static char *strdup(const char *str);
 };
 
+class ChatServer : public FdHandler 
+{
+    EventSelector *the_selector;
+    // настроить првильную принятие двойного массива
+    int **worker_pipes_channel;
+    int current_worker; 
+    int next_worker;
+
+    ChatServer(EventSelector *sel, int fd, int worker_pipes_channel[WORKERS_COUNT][STREAMS_COUNT]); 
+    
+public:
+    ~ChatServer();
+
+    static ChatServer *Start(EventSelector *sel, int port, int **worker_pipes_channel);
+
+private:
+    virtual void Handle(bool re, bool we);
+};
+
 class WorkerServer : public FdHandler
 {
     EventSelector *the_selector;
@@ -97,21 +105,23 @@ class WorkerServer : public FdHandler
     {
         ClientSession *s;
         item *next;
-    }
+    };
     item *first;
+    int my_index;
+    int **pipe;
 public:
-    WorkerServer(EventSelector *sel, int fd);
+    WorkerServer(EventSelector *sel, int idx, int **pipe);
     ~WorkerServer();
 
+    static void worker_func_main(int my_idx, int pipes[WORKERS_COUNT][STREAMS_COUNT]);
+
     void RemoveSession(ClientSession *s);
-
-/*  Тут ещё должны быть мктоды 
- *  для отправки количестов в онлайне, кто они,
- *  void SendAll(const char *msg, ClinetSession *except);
- */
-
+    char *GetNameUserOnline();
+    const char *IsNameUnique(const char *str);
+    void SendAll(const char *msg, ClientSession *except);
+    void SendAllinTheWorkerProcess(const char *msg, ClientSession *except);
 private:
     virtual void Handle(bool r, bool w);
-}
+};
 
 #endif // CHAT_HPP

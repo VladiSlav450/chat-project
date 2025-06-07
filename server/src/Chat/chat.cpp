@@ -6,6 +6,7 @@
 #include <cstring>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/uio.h>
 #include <sys/socket.h>
 
 
@@ -110,30 +111,6 @@ void ClientSession::CheckLines()
         }
     }
 
-/*
-    if(buf_used < 0)
-        return;
-    int i;
-    for(i = 0; i < buf_used; i++)
-    {
-        if(buffer[i] == '\n')
-        {
-            if(i > 0 && buffer[i - 1] == '\r')
-                buffer[i - 1] = 0;
-
-            ProcessChatWithMachinState(buffer);
-            if(need_to_delete)
-                return;
-            //ProcessLine(buffer);
-
-            int rest = buf_used - i - 1;
-            memmove(buffer, buffer + i + 1, rest);
-            buf_used = rest;
-            CheckLines();
-            return;
-        }
-    }
-*/
 }
 
 // Предполагается быть вместо ProcessLine
@@ -177,47 +154,6 @@ void ClientSession::ProcessChatWithMachinState(const char *str)
             break;
     }
 }
-
-#if 0
-void ClientSession::ProcessLine(const char *str)
-{
-    int len = strlen(str);
-    if(!name)
-    {
-        name = new char[len + 1];
-        strcpy(name, str);
-
-        char *wmsg = new char[len + sizeof(welcom_msg) + 2];
-        sprintf(wmsg, "%s%s\n", welcom_msg, name);
-        Send(wmsg);
-        delete[] wmsg;
-
-        char *emsg = new char[len + sizeof(entered_msg) + 2];
-
-        sprintf(emsg, "%s%s\n", name, entered_msg);
-        the_master->SendAll(emsg, this);
-        delete[] emsg;
-        return;
-    }
-
-    if(*str == '/')
-    {
-        char *commands = CommandProcessLine(str);
-
-        Send(commands);
-        delete[] commands;
-    }
-    else
-    {
-        int nl = strlen(name);
-        char *msg = new char[nl + len + 5];
-        sprintf(msg, "<%s> %s\n", name, str);
-
-        the_master->SendAll(msg, this);
-        delete[] msg;
-    }
-}
-#endif
 
 void ClientSession::CommandProcessLine(const char *str)
 {
@@ -360,7 +296,10 @@ ChatServer *ChatServer::Start(EventSelector *sel, int port, int **worker_pipes_c
 }
 
 ChatServer::ChatServer(EventSelector *sel, int fd, int **worker_pipes) 
-    : FdHandler(fd, true),  the_selector(sel), worker_pipes_channel(worker_pipes), next_worker(0) 
+    : FdHandler(fd, true)
+    , the_selector(sel)
+    , worker_pipes_channel(worker_pipes)
+    , next_worker(0) 
 {
     the_selector->Add(this);    
 }
@@ -383,16 +322,75 @@ void ChatServer::Handle(bool re, bool we)
     if(sd == -1)
         return;
 
-    char *buffer_socket_client = new char[5];
-    sprintf(buffer_socket_client, sizeof(buffer_socket_client), "%d", sd);
-    int work_pipe = worker_pipes_channel[next_worker][1];
-    next_worker = (next_worker + 1) % 3;
-    write(next_worker, buffer_socket_client, strlen(buf_user_online));
-    delete[] buffer_socket_client;
+    // определяем кaкому процессу передать полученный дескриптер
+    current_worker = (current_worker + 1) % 3; 
+    // получаем дескрптер канала этого прцуесса куда записать
+    int work_pipe = worker_pipes_channel[current_worker][1];
+
+    // готовим к отправке таблицу с дескриптерами чтобы отправить sd
+
+    // никакое сообщения не отправаляем
+    struct iovec io = {
+        .iov_base = NULL;
+        .iov_len = 0;
+    };
+
+    // записываем дескрипер для отправки
+    char cmsg_buf[CMSG_SPACE(sizeof(int))];
+    struct msghdr msg = {0};
+    msh.msg_iov = &io;
+    msg.msg_control = cmsg_buf;
+    msg.msg_controllen = sizeof(cmsg_buf);
+
+    struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type = SCM_RIGHTS;
+    cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+
+    *(int *)CMSG_DATA(cmsg) = sd;
+
+    sendmsg(work_pipe, &msg, 0);
+
     close(sd);
 }
 
-void ChatServer::RemoveSession(ClientSession *s)
+
+
+// class WorkerServer
+
+void worker_func_main(int my_idx, int pipes[WORKERS_COUNT][STREAMS_COUNT])
+{
+    EventSelector *selector = new EventSelector;  
+    WorkerServer *workserv = new WorkerServer(selector, my_idx, pipes);
+
+    selector->Run();
+}
+
+WorkerServer::WorkerServer(EventSelector *sel, int idx, int **pipe) 
+    : FdHandler(pipe[idx][READ], true)
+    , the_selector(sel)
+    , first(0)
+    , my_index(idx)
+    , pipe(pipe)
+{
+    the_selector->Add(this); 
+}
+
+WorkerServer::~WorkerServer()
+{
+    while(first)
+    {
+        item *tmp = first;
+        first = fist->next;
+
+        the_selector->Remove(tmp->s);
+        delete tmp->s;
+        delete tmp;
+    } 
+    the_selector->Remove(this);
+}
+
+void WorkerServer::RemoveSession(ClientSession *s)
 {
     the_selector->Remove(s);
     item **p;
@@ -409,17 +407,7 @@ void ChatServer::RemoveSession(ClientSession *s)
     }
 }
 
-void ChatServer::SendAll(const char *msg, ClientSession *except)
-{
-    item *p;
-    for(p = first; p; p = p->next)
-    {
-        if(p->s != except)
-            p->s->Send(msg);
-    }
-}
-
-char *ChatServer::GetNumberUsersOnline()
+char *WorkerServer::GetNumberUsersOnline()
 {
     int i;
     int count_users = 0;
@@ -445,7 +433,7 @@ char *ChatServer::GetNumberUsersOnline()
     
 }
 
-char *ChatServer::GetNameUsersOnline()
+char *WorkerServer::GetNameUsersOnline()
 {
     size_t len = max_line_length + 1;
     char *buf_user_online = new char[len];
@@ -487,7 +475,7 @@ char *ChatServer::GetNameUsersOnline()
     return buf_user_online;
 }
 
-const char *ChatServer::IsNameUnique(const char *str)
+const char *WorkerServer::IsNameUnique(const char *str)
 {
     item *tmp;
     for(tmp = first; tmp; tmp = tmp->next)
@@ -499,38 +487,6 @@ const char *ChatServer::IsNameUnique(const char *str)
             return name_already_take_msg;        
     } 
     return 0;
-}
-
-
-
-// Функции и классы для рабочих процессов
-
-void worker_func_main(int worker_pipes)
-{
-    EventSelector *selector = new EventSelector;  
-    WorkerServer *workserv = new WorkerServer(selector, worker_pipes);
-
-    selector->Run();
-}
-
-WorkerServer::WorkerServer(EventSelector *sel, int server_fd) : 
-    FdHandler(serve_fd, true), the_selector(sel), first(0)
-{
-    the_selector->Add(this); 
-}
-
-WorkerServer::~WorkerServer()
-{
-    while(first)
-    {
-        item *tmp = first;
-        first = fist->next;
-
-        the_selector->Remove(tmp->s);
-        delete tmp->s;
-        delete tmp;
-    } 
-    the_selector->Remove(this);
 }
 
 void WorkerServer::RemoveSession(ClientSession *s)
@@ -555,20 +511,88 @@ void WorkerServer::Handle(bool r, bool w)
     if(!r)
         return;
 
-    int sd + ;
-    int res;
+    char *msg_buffer = new char[max_line_length+1];
+    struct iovec io = {
+        .iov_base = msg_buffer;
+        .iov_len = max_line_length;
+    };
+
+    char cmsg_buf[CMSG_SPACE(sizeof(int))];
+
+    struct msghdr msg = {
+        .msg_iov = &io,
+        .msg_len = sizeof(io), 
+        .msg_control = cmsg_buf,
+        .msg_controllen = sizeof(cmsg_buf),
+    };
+
+    if(recvmsg(GetFd(), &msg, 0) <= 0)
+    {
+        perror("recvmsg failed");
+        return; 
+    }
+
+    if(msg.msg_controllen > 0)
+    {
+        // получение  дескриптера клиента от главного процесса
+        struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+        if(!cmsg || cmsg->cmsg_type != SCM_RIGHTS)
+        {
+            perror("failed messgae");
+            return;
+        }
+
+        int sd = *(int *)CMSG_DATA(csmg); 
+
+        itme *p = new item;
+        p->next = first;
+        p->s = new ClientSession(this, sd);
+        first = p;
+
+        the_selector->Add(p->s);
+    }
+    else
+    {
+        // это сообщение от других процессов
+        // пересылаем всем 
+        SendAllinTheWorkerProcess(msg_buffer);
+        delete[] msg_buffer;    
+    }
+}
+
+void WorkerServer::SendAll(const char *msg, ClientSession *except = 0)
+{
+    SendAllinTheWorkerProcess(msg, except);
+
+    struct iovec io = {
+        .iov_base = msg,
+        .iov_len = sizeof(msg)
+    };
+
+    struct msghdr hdr = {
+        .msg_iov = &io,
+        .msg_iovlen = 1,
+        .msg_control = NULL,
+        .msg_controllen = 0
+    };
+
     int i;
+    for(i = 0; i < WORKERS_COUNT; i++)
+    {
+        if(i != my_index)
+        {
+            sendmsg(pipe[i][WRITE], hdr, strlen(msg)); 
+        }
+    }  
+}
 
-    char *msgfromserv = new char[5];
-    res = read(GetFd(), msgfromserv, sizeof(msgfromserv)); 
-    msgfromserv[res] = 0;
-    for(i = 0; msgfromserv[i]; i++)
-        sd = sd * 10 + msgfromserv[i] - 48;
-    itme *p = new item;
-    p->next = first;
-    p->s = new ClientSession(this, sd);
-    first = p;
-
-    the_selector->Add(p->s);
+void WorkerServer::SendAllinTheWorkerProcess(const char *msg, ClientSession *except = 0)
+{
+    item *p;
+    for(p = first; p; p = p->next)
+    {
+        if(p->s != except)
+            p->s->Send(msg);
+    }
 }
 
