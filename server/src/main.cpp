@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <sys/socket.h>
 
 
 #include "../include/Chat/chat.hpp"
@@ -13,20 +15,19 @@ static int the_server_port = 7777;
 
 int main()
 {
-    int pipes[WORKERS_COUNT][STREAMS_COUNT]; // [0] - read, [1] - write
+    int worker_com_channel[WORKERS_COUNT][STREAMS_COUNT]; // [0] - parent, [1] - child
     int worker_pids[WORKERS_COUNT];
 
     int i;
     for(i = 0; i < WORKERS_COUNT; i++)
     {
-        if(pipe(pipes[i]) == -1)
+        if(socketpair(AF_UNIX, SOCK_STREAM, 0, worker_com_channel[i]) == -1)
         {
-            perror("pipe failed");
+            perror("socketpair failed");
             exit(EXIT_FAILURE);
         }
-        close(pipes[i][READ]);
     }
-   for(i = 0; i < WORKERS_COUNT; i++)
+    for(i = 0; i < WORKERS_COUNT; i++)
     {
         worker_pids[i] = fork();
         if(worker_pids[i] == -1)
@@ -37,19 +38,31 @@ int main()
 
         if(worker_pids[i] == 0)
         {
-            close(pipes[i][WRITE]);
+            close(worker_com_channel[i][SOCKET_PARENT]);
+            worker_com_channel[i][SOCKET_PARENT] = -1;
+            printf("-------\nworker %d\nworker_com_channel[%d] {%d, %d}\n--------\n",i, i, worker_com_channel[i][SOCKET_PARENT], worker_com_channel[i][SOCKET_CHILD]);
             int j;
             for(j = 0; j < WORKERS_COUNT; j++)
+            {
                 if(j != i)
-                    close(pipes[i][READ]); 
-            close(pipes[i][WRITE]);
-            WorkerServer::worker_func_main(i, pipes); 
+                {
+                    close(worker_com_channel[j][SOCKET_PARENT]); 
+                    worker_com_channel[j][SOCKET_PARENT] = -1;
+                }
+            }
+            WorkerServer::worker_func_main(i, worker_com_channel); 
             exit(0);
         }
     }
 
+    for(i = 0; i < WORKERS_COUNT; i++)
+    {
+        close(worker_com_channel[i][SOCKET_CHILD]);
+        worker_com_channel[i][SOCKET_CHILD] = -1;
+    }
+
     EventSelector *selector = new EventSelector;
-    ChatServer *server = ChatServer::Start(selector, the_server_port, pipes);
+    ChatServer *server = ChatServer::Start(selector, the_server_port, worker_com_channel);
     if(!server)
     {
         perror("server start failed");
@@ -59,8 +72,8 @@ int main()
 
     for(i = 0; i < 3; i++)
     {
-        close(worker_pides[i][1]);
-        kill(worker_pides[i], SIGTERM);
+        close(worker_com_channel[i][SOCKET_PARENT]);
+        kill(worker_pids[i], SIGTERM);
     } 
     return 0;
 }

@@ -7,8 +7,8 @@
 
 #define WORKERS_COUNT 3
 #define STREAMS_COUNT 2
-#define READ 0
-#define WRITE 1
+#define SOCKET_PARENT 0
+#define SOCKET_CHILD 1
 
 #include "../Sockets/sockets.hpp"
 
@@ -57,7 +57,7 @@ class ClientSession : FdHandler
     fsm_ClientState current_state;
     bool need_to_delete;
 
-    ClientSession(ChatServer *a_master, int fd);
+    ClientSession(WorkerServer *a_master, int fd);
     ~ClientSession();
 
     void Send(const char *msg);
@@ -83,16 +83,14 @@ class ChatServer : public FdHandler
 {
     EventSelector *the_selector;
     // настроить првильную принятие двойного массива
-    int **worker_pipes_channel;
+    int worker_com_channel[WORKERS_COUNT][STREAMS_COUNT];
     int current_worker; 
-    int next_worker;
 
-    ChatServer(EventSelector *sel, int fd, int worker_pipes_channel[WORKERS_COUNT][STREAMS_COUNT]); 
-    
+    ChatServer(EventSelector *sel, int fd, int worker_pipes[WORKERS_COUNT][STREAMS_COUNT]); 
 public:
     ~ChatServer();
 
-    static ChatServer *Start(EventSelector *sel, int port, int **worker_pipes_channel);
+    static ChatServer *Start(EventSelector *sel, int port, int worker_pipes_channel[WORKERS_COUNT][STREAMS_COUNT]);
 
 private:
     virtual void Handle(bool re, bool we);
@@ -108,18 +106,19 @@ class WorkerServer : public FdHandler
     };
     item *first;
     int my_index;
-    int **pipe;
+    int worker_com_channel[WORKERS_COUNT][STREAMS_COUNT];
 public:
-    WorkerServer(EventSelector *sel, int idx, int **pipe);
+    WorkerServer(EventSelector *sel, int idx, int channel[WORKERS_COUNT][STREAMS_COUNT]);
     ~WorkerServer();
 
-    static void worker_func_main(int my_idx, int pipes[WORKERS_COUNT][STREAMS_COUNT]);
+    static void worker_func_main(int my_idx, int socket_channel[WORKERS_COUNT][STREAMS_COUNT]);
 
     void RemoveSession(ClientSession *s);
-    char *GetNameUserOnline();
+    char *GetNumberUsersOnline();
+    char *GetNameUsersOnline();
     const char *IsNameUnique(const char *str);
-    void SendAll(const char *msg, ClientSession *except);
-    void SendAllinTheWorkerProcess(const char *msg, ClientSession *except);
+    void SendAll(const char *msg, ClientSession *except = 0);
+    void SendAllinTheWorkerProcess(const char *msg, ClientSession *except = 0);
 private:
     virtual void Handle(bool r, bool w);
 };

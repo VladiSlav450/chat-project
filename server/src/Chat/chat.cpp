@@ -1,5 +1,6 @@
 // server/src/Chat/chat.cpp
 
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -12,7 +13,7 @@
 
 #include "../../include/Chat/chat.hpp"
 
-ClientSession::ClientSession(ChatServer *a_master, int fd) 
+ClientSession::ClientSession(WorkerServer *a_master, int fd) 
     : FdHandler(fd, true), buf_used(0), ignoring(false), name(0)
     , the_master(a_master), current_state(fsm_ClientState::fsm_NewConnected)
     , need_to_delete(false)
@@ -269,7 +270,7 @@ char *ClientSession::strdup(const char *str)
 
 // class ChatServer
 
-ChatServer *ChatServer::Start(EventSelector *sel, int port, int **worker_pipes_channel)
+ChatServer *ChatServer::Start(EventSelector *sel, int port, int worker_com_channel[WORKERS_COUNT][STREAMS_COUNT])
 {
     int ls, opt, res;
     struct sockaddr_in addr;
@@ -292,15 +293,19 @@ ChatServer *ChatServer::Start(EventSelector *sel, int port, int **worker_pipes_c
         return 0;
     } 
     listen(ls, qlen_for_listen);
-    return new ChatServer(sel, ls, worker_pipes_channel);
+    return new ChatServer(sel, ls, worker_com_channel);
 }
 
-ChatServer::ChatServer(EventSelector *sel, int fd, int **worker_pipes) 
+ChatServer::ChatServer(EventSelector *sel, int fd, int worker_channel[WORKERS_COUNT][STREAMS_COUNT]) 
     : FdHandler(fd, true)
     , the_selector(sel)
-    , worker_pipes_channel(worker_pipes)
-    , next_worker(0) 
+    , current_worker(0)
 {
+    int i, j;
+    for(i = 0; i < WORKERS_COUNT; i++)
+        for(j = 0; j < STREAMS_COUNT; j++)
+        worker_com_channel[i][j] = worker_channel[i][j];
+
     the_selector->Add(this);    
 }
 
@@ -313,6 +318,24 @@ void ChatServer::Handle(bool re, bool we)
 {
     if(!re)
         return;
+
+    printf("\nЭто вызов ChatServer::Handle какие сокеты есть у главгого процесса:\n{[");
+    
+    for(int i = 0; i < WORKERS_COUNT; i++)
+    {
+        for(int j = 0; j < STREAMS_COUNT; j++)
+        {
+            printf("%d", worker_com_channel[i][j]); 
+            if(j + 1 == STREAMS_COUNT)
+                break;
+            printf(" ");
+        }
+        if(i + 1 == WORKERS_COUNT)
+            break;
+        printf("], [");
+    }
+    printf("]}\n\n");
+
     int sd;
     
     struct sockaddr_in addr;
@@ -325,22 +348,24 @@ void ChatServer::Handle(bool re, bool we)
     // определяем кaкому процессу передать полученный дескриптер
     current_worker = (current_worker + 1) % 3; 
     // получаем дескрптер канала этого прцуесса куда записать
-    int work_pipe = worker_pipes_channel[current_worker][1];
+    int worker_socket = worker_com_channel[current_worker][SOCKET_PARENT];
 
     // готовим к отправке таблицу с дескриптерами чтобы отправить sd
 
     // никакое сообщения не отправаляем
     struct iovec io = {
-        .iov_base = NULL;
-        .iov_len = 0;
+        .iov_base = (void*)"",
+        .iov_len = 1
     };
 
     // записываем дескрипер для отправки
     char cmsg_buf[CMSG_SPACE(sizeof(int))];
+
     struct msghdr msg = {0};
-    msh.msg_iov = &io;
+    msg.msg_iov = &io;
+    msg.msg_iovlen = 1;
     msg.msg_control = cmsg_buf;
-    msg.msg_controllen = sizeof(cmsg_buf);
+    msg.msg_controllen = sizeof(int);
 
     struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
     cmsg->cmsg_level = SOL_SOCKET;
@@ -349,30 +374,51 @@ void ChatServer::Handle(bool re, bool we)
 
     *(int *)CMSG_DATA(cmsg) = sd;
 
-    sendmsg(work_pipe, &msg, 0);
+    printf("Debug: worker_socket=%d, sd=%d\n", worker_socket, sd);
+    printf("msg_iovlen=%zu, msg_controllen=%zu\n", msg.msg_iovlen, msg.msg_controllen);
+    printf("cmsg_len=%lu, cmsg_level=%d, cmsg_type=%d\n", 
+            cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
 
-    close(sd);
+    int res = sendmsg(worker_socket, &msg, 0);
+    printf("Отправка воркеру %d, номер сокета воркера %d, байт отправлено %d\n", current_worker, worker_socket, res);
+    
+    if(res < 0)
+    {
+        perror("sendmsg failed, пизде");
+        close(sd);
+    }
 }
 
 
 
 // class WorkerServer
 
-void worker_func_main(int my_idx, int pipes[WORKERS_COUNT][STREAMS_COUNT])
+void WorkerServer::worker_func_main(int my_idx, int socket_channel[WORKERS_COUNT][STREAMS_COUNT])
 {
     EventSelector *selector = new EventSelector;  
-    WorkerServer *workserv = new WorkerServer(selector, my_idx, pipes);
+    WorkerServer *workserv = new WorkerServer(selector, my_idx, socket_channel);
 
     selector->Run();
+
+    delete workserv;
 }
 
-WorkerServer::WorkerServer(EventSelector *sel, int idx, int **pipe) 
-    : FdHandler(pipe[idx][READ], true)
+WorkerServer::WorkerServer(EventSelector *sel, int idx, int socket_channel[WORKERS_COUNT][STREAMS_COUNT]) 
+    : FdHandler(socket_channel[idx][SOCKET_CHILD], true)
     , the_selector(sel)
     , first(0)
     , my_index(idx)
-    , pipe(pipe)
 {
+    printf("Конструктор воркера %d, сокет который читает %d\n", idx, GetFd());
+    int i, j;
+    for(i = 0; i < WORKERS_COUNT; i++)
+    {
+        for(j = 0; j < STREAMS_COUNT; j++)
+        {
+            worker_com_channel[i][j] = socket_channel[i][j];
+        }
+    }
+
     the_selector->Add(this); 
 }
 
@@ -381,7 +427,7 @@ WorkerServer::~WorkerServer()
     while(first)
     {
         item *tmp = first;
-        first = fist->next;
+        first = first->next;
 
         the_selector->Remove(tmp->s);
         delete tmp->s;
@@ -489,62 +535,74 @@ const char *WorkerServer::IsNameUnique(const char *str)
     return 0;
 }
 
-void WorkerServer::RemoveSession(ClientSession *s)
-{
-    the_selector->Remove(s);
-    item **p;
-    for(p = &first; *p; p = &((*p)->next))
-    {
-        if((*p)->s == s)
-        {
-            item *tmp = *p;
-            *p = tmp->next;
-            delete tmp->s;
-            delete tmp;
-            return;
-        }
-    }
-}
-
 void WorkerServer::Handle(bool r, bool w)
 {
+    printf("Worker handle begin\n");
     if(!r)
         return;
 
+    printf("\nЭто вызов WorkerServer::Handle какие сокеты есть у главгого процесса:\n{[");
+    
+    for(int i = 0; i < WORKERS_COUNT; i++)
+    {
+        for(int j = 0; j < STREAMS_COUNT; j++)
+        {
+            printf("%d", worker_com_channel[i][j]); 
+            if(j + 1 == STREAMS_COUNT)
+                break;
+            printf(" ");
+        }
+        if(i + 1 == WORKERS_COUNT)
+            break;
+        printf("], [");
+    }
+    printf("]}\n\n");
+
     char *msg_buffer = new char[max_line_length+1];
     struct iovec io = {
-        .iov_base = msg_buffer;
-        .iov_len = max_line_length;
+        .iov_base = msg_buffer,
+        .iov_len = max_line_length
     };
 
     char cmsg_buf[CMSG_SPACE(sizeof(int))];
 
-    struct msghdr msg = {
-        .msg_iov = &io,
-        .msg_len = sizeof(io), 
-        .msg_control = cmsg_buf,
-        .msg_controllen = sizeof(cmsg_buf),
-    };
+    struct msghdr msg = {0};
+    msg.msg_iov = &io;
+    msg.msg_iovlen = 1; 
+    msg.msg_control = cmsg_buf;
+    msg.msg_controllen = sizeof(cmsg_buf);
 
-    if(recvmsg(GetFd(), &msg, 0) <= 0)
+    struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+
+    int flags = 0;
+    int res = recvmsg(GetFd(), &msg, flags);
+    printf("Номер воркера %d, Получение сообщения по сокету %d, прочитано байт сообщений %d," 
+           " прочитано байт специальных данных(десакриптеров) %d\n",my_index, GetFd(), res, *(int *)CMSG_DATA(cmsg));
+    if(res <= 0)
     {
-        perror("recvmsg failed");
+        perror("recvmsg failed, Hello here Failed!");
         return; 
     }
 
     if(msg.msg_controllen > 0)
     {
         // получение  дескриптера клиента от главного процесса
-        struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
         if(!cmsg || cmsg->cmsg_type != SCM_RIGHTS)
         {
             perror("failed messgae");
             return;
         }
 
-        int sd = *(int *)CMSG_DATA(csmg); 
+        int sd = *(int *)CMSG_DATA(cmsg); 
 
-        itme *p = new item;
+        printf("Recevied description %d\n", sd);
+        if(fcntl(sd, F_GETFL) == -1)
+        {
+            perror("Received invalid description");
+            close(sd);
+            return;
+        }
+        item *p = new item;
         p->next = first;
         p->s = new ClientSession(this, sd);
         first = p;
@@ -556,17 +614,20 @@ void WorkerServer::Handle(bool r, bool w)
         // это сообщение от других процессов
         // пересылаем всем 
         SendAllinTheWorkerProcess(msg_buffer);
-        delete[] msg_buffer;    
     }
+    delete[] msg_buffer;    
 }
 
-void WorkerServer::SendAll(const char *msg, ClientSession *except = 0)
+void WorkerServer::SendAll(const char *msg, ClientSession *except)
 {
     SendAllinTheWorkerProcess(msg, except);
 
+    char *all_msg = new char[strlen(msg) + 1];
+    strcpy(all_msg, msg);
+
     struct iovec io = {
-        .iov_base = msg,
-        .iov_len = sizeof(msg)
+        .iov_base = all_msg,
+        .iov_len = sizeof(all_msg)
     };
 
     struct msghdr hdr = {
@@ -581,12 +642,13 @@ void WorkerServer::SendAll(const char *msg, ClientSession *except = 0)
     {
         if(i != my_index)
         {
-            sendmsg(pipe[i][WRITE], hdr, strlen(msg)); 
+            sendmsg(worker_com_channel[i][SOCKET_CHILD], &hdr, MSG_NOSIGNAL); 
         }
     }  
+    delete[] all_msg;
 }
 
-void WorkerServer::SendAllinTheWorkerProcess(const char *msg, ClientSession *except = 0)
+void WorkerServer::SendAllinTheWorkerProcess(const char *msg, ClientSession *except)
 {
     item *p;
     for(p = first; p; p = p->next)
