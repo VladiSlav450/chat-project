@@ -40,7 +40,6 @@ int main()
         {
             close(worker_com_channel[i][SOCKET_PARENT]);
             worker_com_channel[i][SOCKET_PARENT] = -1;
-            printf("-------\nworker %d\nworker_com_channel[%d] {%d, %d}\n--------\n",i, i, worker_com_channel[i][SOCKET_PARENT], worker_com_channel[i][SOCKET_CHILD]);
             int j;
 
             for(j = 0; j < WORKERS_COUNT; j++)

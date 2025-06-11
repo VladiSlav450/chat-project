@@ -86,19 +86,15 @@ void EventSelector::Run()
     quit_flag = false;
 
     do {
-        printf("Run Begin\n");
         fd_set rds, wrs;
 
         FD_ZERO(&rds);
         FD_ZERO(&wrs);
         
-        // delelte it
-        int fd_key_watch;
 
         for(Key_Array *tmp = first; tmp; tmp = tmp->next)
         {
             int fd_key = tmp->value;
-            fd_key_watch = fd_key;
             FdHandler *handler = fd_array[fd_key];
 
             if(handler->WantRead())
@@ -106,12 +102,9 @@ void EventSelector::Run()
 
             if(handler->WantWrite())
                 FD_SET(fd_key, &wrs);
-
-            printf("Start select, fd_key = %d, добавлен ли в rds? %d\n", fd_key_watch, FD_ISSET(fd_key, &rds));
         }
 
         int res = select(max_fd + 1, &rds, &wrs, 0, 0);
-        printf("Сработал select, res = %d\n", res);
         if(res < 0)
         {
             if(errno == EINTR)
@@ -131,7 +124,6 @@ void EventSelector::Run()
 
                 if(handler)
                 {
-                    printf("Вызов Handler для сокета %d\n", fd_key);
                     bool r = FD_ISSET(fd_key, &rds);
                     bool w = FD_ISSET(fd_key, &wrs);
                     if(r || w)
@@ -140,6 +132,5 @@ void EventSelector::Run()
                 tmp = next;
             }
         }
-        printf("End select\n");
     } while(!quit_flag);
 }

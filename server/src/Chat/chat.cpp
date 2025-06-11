@@ -36,8 +36,6 @@ void ClientSession::Handle(bool re, bool we)
     if(!re)
         return;
 
-    printf("\nЭто вызов ClientSession::Handle его сокет %d вызван для чтиения данных от клиенета\n", GetFd());
-
     if(buf_used >= (int)sizeof(buffer))
     {
         buf_used = 0;
@@ -116,7 +114,6 @@ void ClientSession::CheckLines()
 
 }
 
-// Предполагается быть вместо ProcessLine
 void ClientSession::ProcessChatWithMachinState(const char *str)
 {
     switch(current_state)
@@ -321,23 +318,6 @@ void ChatServer::Handle(bool re, bool we)
     if(!re)
         return;
 
-    printf("\nЭто вызов ChatServer::Handle слушает сокет %d какие сокеты есть у главгого процесса:\n{[", GetFd());
-    
-    for(int i = 0; i < WORKERS_COUNT; i++)
-    {
-        for(int j = 0; j < STREAMS_COUNT; j++)
-        {
-            printf("%d", worker_com_channel[i][j]); 
-            if(j + 1 == STREAMS_COUNT)
-                break;
-            printf(" ");
-        }
-        if(i + 1 == WORKERS_COUNT)
-            break;
-        printf("], [");
-    }
-    printf("]}\n\n");
-
     int sd;
     
     struct sockaddr_in addr;
@@ -527,26 +507,8 @@ const char *WorkerServer::IsNameUnique(const char *str)
 
 void WorkerServer::Handle(bool r, bool w)
 {
-    printf("Worker handle begin\n");
     if(!r)
         return;
-
-    printf("\nЭто вызов WorkerServer::Handle, слушает сокет %d какие сокеты есть у worker процесса:\n{[", GetFd());
-    
-    for(int i = 0; i < WORKERS_COUNT; i++)
-    {
-        for(int j = 0; j < STREAMS_COUNT; j++)
-        {
-            printf("%d", worker_com_channel[i][j]); 
-            if(j + 1 == STREAMS_COUNT)
-                break;
-            printf(" ");
-        }
-        if(i + 1 == WORKERS_COUNT)
-            break;
-        printf("], [");
-    }
-    printf("]}\n\n");
 
     char *msg_buffer = new char[max_line_length+1];
 
@@ -572,6 +534,8 @@ void WorkerServer::Handle(bool r, bool w)
     }
 
     struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+
+    // проверям есть ли специальные данные в виде дескриптера
     if(cmsg && cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS)
     {
         // получение  дескриптера клиента от главного процесса
@@ -586,6 +550,7 @@ void WorkerServer::Handle(bool r, bool w)
     }
     else
     {
+        // значит это сообщение
         msg_buffer[res] = '\0'; 
         SendAllinTheWorkerProcess(msg_buffer);
     }
