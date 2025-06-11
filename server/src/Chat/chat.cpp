@@ -1,10 +1,9 @@
 // server/src/Chat/chat.cpp
 
-#include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <cstring>
+#include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/uio.h>
@@ -36,6 +35,9 @@ void ClientSession::Handle(bool re, bool we)
 {
     if(!re)
         return;
+
+    printf("\nЭто вызов ClientSession::Handle его сокет %d вызван для чтиения данных от клиенета\n", GetFd());
+
     if(buf_used >= (int)sizeof(buffer))
     {
         buf_used = 0;
@@ -319,7 +321,7 @@ void ChatServer::Handle(bool re, bool we)
     if(!re)
         return;
 
-    printf("\nЭто вызов ChatServer::Handle какие сокеты есть у главгого процесса:\n{[");
+    printf("\nЭто вызов ChatServer::Handle слушает сокет %d какие сокеты есть у главгого процесса:\n{[", GetFd());
     
     for(int i = 0; i < WORKERS_COUNT; i++)
     {
@@ -343,50 +345,39 @@ void ChatServer::Handle(bool re, bool we)
 
     sd = accept(GetFd(), (struct sockaddr *) &addr, &len);
     if(sd == -1)
+    {
+        perror("accept filed");
         return;
+    }
 
-    // определяем кaкому процессу передать полученный дескриптер
     current_worker = (current_worker + 1) % 3; 
-    // получаем дескрптер канала этого прцуесса куда записать
     int worker_socket = worker_com_channel[current_worker][SOCKET_PARENT];
 
-    // готовим к отправке таблицу с дескриптерами чтобы отправить sd
-
-    // никакое сообщения не отправаляем
+    char dummy = '\0';
     struct iovec io = {
-        .iov_base = (void*)"",
+        .iov_base = &dummy,
         .iov_len = 1
     };
 
-    // записываем дескрипер для отправки
     char cmsg_buf[CMSG_SPACE(sizeof(int))];
-
     struct msghdr msg = {0};
     msg.msg_iov = &io;
     msg.msg_iovlen = 1;
     msg.msg_control = cmsg_buf;
-    msg.msg_controllen = sizeof(int);
+    msg.msg_controllen = sizeof(cmsg_buf);
 
     struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
     cmsg->cmsg_len = CMSG_LEN(sizeof(int));
-
     *(int *)CMSG_DATA(cmsg) = sd;
 
-    printf("Debug: worker_socket=%d, sd=%d\n", worker_socket, sd);
-    printf("msg_iovlen=%zu, msg_controllen=%zu\n", msg.msg_iovlen, msg.msg_controllen);
-    printf("cmsg_len=%lu, cmsg_level=%d, cmsg_type=%d\n", 
-            cmsg->cmsg_len, cmsg->cmsg_level, cmsg->cmsg_type);
-
     int res = sendmsg(worker_socket, &msg, 0);
-    printf("Отправка воркеру %d, номер сокета воркера %d, байт отправлено %d\n", current_worker, worker_socket, res);
-    
     if(res < 0)
     {
-        perror("sendmsg failed, пизде");
-        close(sd);
+        perror("sendmsg failed, пиздец иди нахуй");
     }
+    close(sd);
 }
 
 
@@ -409,7 +400,6 @@ WorkerServer::WorkerServer(EventSelector *sel, int idx, int socket_channel[WORKE
     , first(0)
     , my_index(idx)
 {
-    printf("Конструктор воркера %d, сокет который читает %d\n", idx, GetFd());
     int i, j;
     for(i = 0; i < WORKERS_COUNT; i++)
     {
@@ -541,7 +531,7 @@ void WorkerServer::Handle(bool r, bool w)
     if(!r)
         return;
 
-    printf("\nЭто вызов WorkerServer::Handle какие сокеты есть у главгого процесса:\n{[");
+    printf("\nЭто вызов WorkerServer::Handle, слушает сокет %d какие сокеты есть у worker процесса:\n{[", GetFd());
     
     for(int i = 0; i < WORKERS_COUNT; i++)
     {
@@ -559,9 +549,10 @@ void WorkerServer::Handle(bool r, bool w)
     printf("]}\n\n");
 
     char *msg_buffer = new char[max_line_length+1];
+
     struct iovec io = {
         .iov_base = msg_buffer,
-        .iov_len = max_line_length
+        .iov_len = max_line_length + 1
     };
 
     char cmsg_buf[CMSG_SPACE(sizeof(int))];
@@ -572,36 +563,20 @@ void WorkerServer::Handle(bool r, bool w)
     msg.msg_control = cmsg_buf;
     msg.msg_controllen = sizeof(cmsg_buf);
 
-    struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
 
-    int flags = 0;
-    int res = recvmsg(GetFd(), &msg, flags);
-    printf("Номер воркера %d, Получение сообщения по сокету %d, прочитано байт сообщений %d," 
-           " прочитано байт специальных данных(десакриптеров) %d\n",my_index, GetFd(), res, *(int *)CMSG_DATA(cmsg));
-    if(res <= 0)
+    int res = recvmsg(GetFd(), &msg, 0);
+    if(res < 0)
     {
-        perror("recvmsg failed, Hello here Failed!");
+        perror("recvmsg failed");
         return; 
     }
 
-    if(msg.msg_controllen > 0)
+    struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+    if(cmsg && cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS)
     {
         // получение  дескриптера клиента от главного процесса
-        if(!cmsg || cmsg->cmsg_type != SCM_RIGHTS)
-        {
-            perror("failed messgae");
-            return;
-        }
-
         int sd = *(int *)CMSG_DATA(cmsg); 
 
-        printf("Recevied description %d\n", sd);
-        if(fcntl(sd, F_GETFL) == -1)
-        {
-            perror("Received invalid description");
-            close(sd);
-            return;
-        }
         item *p = new item;
         p->next = first;
         p->s = new ClientSession(this, sd);
@@ -611,41 +586,37 @@ void WorkerServer::Handle(bool r, bool w)
     }
     else
     {
-        // это сообщение от других процессов
-        // пересылаем всем 
+        msg_buffer[res] = '\0'; 
         SendAllinTheWorkerProcess(msg_buffer);
     }
+
     delete[] msg_buffer;    
 }
 
 void WorkerServer::SendAll(const char *msg, ClientSession *except)
 {
     SendAllinTheWorkerProcess(msg, except);
-
-    char *all_msg = new char[strlen(msg) + 1];
-    strcpy(all_msg, msg);
-
     struct iovec io = {
-        .iov_base = all_msg,
-        .iov_len = sizeof(all_msg)
+        .iov_base = (void*)msg,
+        .iov_len = strlen(msg) + 1
     };
 
-    struct msghdr hdr = {
-        .msg_iov = &io,
-        .msg_iovlen = 1,
-        .msg_control = NULL,
-        .msg_controllen = 0
-    };
+    struct msghdr hdr = {0};
+    hdr.msg_iov = &io;
+    hdr.msg_iovlen = 1;
+    hdr.msg_control = NULL;
+    hdr.msg_controllen = 0;
 
     int i;
     for(i = 0; i < WORKERS_COUNT; i++)
     {
         if(i != my_index)
         {
-            sendmsg(worker_com_channel[i][SOCKET_CHILD], &hdr, MSG_NOSIGNAL); 
+            int res = sendmsg(worker_com_channel[i][SOCKET_PARENT], &hdr, MSG_NOSIGNAL); 
+            if(res < 0)
+                perror("sendmsg failed");
         }
     }  
-    delete[] all_msg;
 }
 
 void WorkerServer::SendAllinTheWorkerProcess(const char *msg, ClientSession *except)

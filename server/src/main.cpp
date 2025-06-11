@@ -42,14 +42,16 @@ int main()
             worker_com_channel[i][SOCKET_PARENT] = -1;
             printf("-------\nworker %d\nworker_com_channel[%d] {%d, %d}\n--------\n",i, i, worker_com_channel[i][SOCKET_PARENT], worker_com_channel[i][SOCKET_CHILD]);
             int j;
+
             for(j = 0; j < WORKERS_COUNT; j++)
             {
                 if(j != i)
                 {
-                    close(worker_com_channel[j][SOCKET_PARENT]); 
-                    worker_com_channel[j][SOCKET_PARENT] = -1;
+                    close(worker_com_channel[j][SOCKET_CHILD]); 
+                    worker_com_channel[j][SOCKET_CHILD] = -1;
                 }
             }
+
             WorkerServer::worker_func_main(i, worker_com_channel); 
             exit(0);
         }
