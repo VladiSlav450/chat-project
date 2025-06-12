@@ -13,9 +13,14 @@
 #include "../../include/Chat/chat.hpp"
 
 ClientSession::ClientSession(WorkerServer *a_master, int fd) 
-    : FdHandler(fd, true), buf_used(0), ignoring(false), name(0)
-    , the_master(a_master), current_state(fsm_ClientState::fsm_NewConnected)
+    : FdHandler(fd, true)
+    , buf_used(0)
+    , ignoring(false)
+    , name(0)
+    , the_master(a_master)
+    , current_state(fsm_ClientState::fsm_NewConnected)
     , need_to_delete(false)
+    , need_to_shutdown(false)
 {
     Send("Your name please: "); 
 }
@@ -48,6 +53,8 @@ void ClientSession::Handle(bool re, bool we)
 
     if(need_to_delete)
         DisconnectedClient();
+    else if(need_to_shutdown)
+        the_master->ShutDownAllServer();
 }
 
 void ClientSession::ReadAndIgnore()
@@ -90,7 +97,7 @@ void ClientSession::ReadAndCheck()
 
 void ClientSession::CheckLines()
 {
-    while(buf_used > 0 && !need_to_delete)
+    while(buf_used > 0 && !need_to_delete && !need_to_shutdown) 
     {
         int i;
         for(i = 0; i < buf_used; i++)
@@ -101,7 +108,7 @@ void ClientSession::CheckLines()
                     buffer[i - 1] = 0;
 
                 ProcessChatWithMachinState(buffer);
-                if(need_to_delete)
+                if(need_to_delete || need_to_shutdown)
                     break;
 
                 int rest = buf_used - i - 1;
@@ -111,7 +118,6 @@ void ClientSession::CheckLines()
             }
         }
     }
-
 }
 
 void ClientSession::ProcessChatWithMachinState(const char *str)
@@ -189,6 +195,10 @@ void ClientSession::CommandProcessLine(const char *str)
     {
         need_to_delete = true;
     }
+    else if(strcmp(str, "/shutdown") == 0)
+    {
+        need_to_shutdown = true;
+    }
     else
     {
         buf = new char[serv_com + nl + sizeof(unknow_command_msg) + 5];
@@ -198,19 +208,6 @@ void ClientSession::CommandProcessLine(const char *str)
 
     if(buf)
         delete[] buf;
-}
-
-void ClientSession::DisconnectedClient()
-{
-    if(name)
-    {
-        int len = strlen(name);
-        char *lmsg = new char[len + sizeof(left_msg) + 2];
-        sprintf(lmsg, "%s%s\n", name, left_msg);
-        the_master->SendAll(lmsg, this);
-        delete[] lmsg;
-    }
-    the_master->RemoveSession(this);
 }
 
 void ClientSession::WelcomAndEnteredMsgAndSetName(const char *str)
@@ -239,6 +236,19 @@ void ClientSession::SetName(const char *str)
     name = strdup(str);
 }
 
+void ClientSession::DisconnectedClient()
+{
+    if(name)
+    {
+        int len = strlen(name);
+        char *lmsg = new char[len + sizeof(left_msg) + 2];
+        sprintf(lmsg, "%s%s\n", name, left_msg);
+        the_master->SendAll(lmsg, this);
+        delete[] lmsg;
+    }
+    the_master->RemoveSession(this);
+}
+
 const char *ClientSession::ValidateName(const char *str)
 {
     size_t len = strlen(str);
@@ -265,6 +275,60 @@ char *ClientSession::strdup(const char *str)
     char *result = new char[strlen(str) + 1];
     strcpy(result, str);
     return result;
+}
+
+
+// class WorkerSession
+WorkerSession::WorkerSession(ChatServer *a_master, int fd) 
+    : FdHandler(fd, true)
+    , the_master(a_master) 
+{}
+
+void WorkerSession::Handle(bool re, bool we)
+{
+    if(!re)
+        return;
+
+    struct iovec io = {
+        .iov_base = buffer,
+        .iov_len = sizeof(buffer)
+    };
+
+    char cmsg_buf[CMSG_SPACE(sizeof(int))];
+
+    struct msghdr msg = {0};
+    msg.msg_iov = &io;
+    msg.msg_iovlen = 1; 
+    msg.msg_control = cmsg_buf;
+    msg.msg_controllen = sizeof(cmsg_buf);
+
+
+    int res = recvmsg(GetFd(), &msg, 0);
+    if(res < 0)
+    {
+        perror("recvmsg failed");
+        return; 
+    }
+
+    struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+
+    // проверям есть ли специальные данные в виде дескриптера
+    if(!cmsg && cmsg->cmsg_level != SOL_SOCKET && cmsg->cmsg_type != SCM_RIGHTS)
+    {
+        // значит это сообщение о выключении сервера
+        buffer[res] = '\0'; 
+        char *strshutdown = new char[strlen(server_commands) + strlen(server_shutdown) + 3];
+        sprintf(strshutdown, "%s %s\n", server_commands, server_shutdown);
+        if(strncmp(buffer, strshutdown, strlen(strshutdown)) == 0)
+        {
+            the_master->ShutDownAllServer();
+        }
+        else
+            printf("command /shutdown message in WorkerSession failed\n");
+        delete[] strshutdown;
+    }
+    else
+        printf("recvmsg failed messgae in WorkerSession"); 
 }
 
 // class ChatServer
@@ -300,16 +364,29 @@ ChatServer::ChatServer(EventSelector *sel, int fd, int worker_channel[WORKERS_CO
     , the_selector(sel)
     , current_worker(0)
 {
-    int i, j;
+    int i;
     for(i = 0; i < WORKERS_COUNT; i++)
-        for(j = 0; j < STREAMS_COUNT; j++)
-        worker_com_channel[i][j] = worker_channel[i][j];
-
+    {
+        item *p = new item;
+        p->next = first;
+        p->s = new WorkerSession(this, worker_channel[i][SOCKET_PARENT]);
+        first = p;
+        the_selector->Add(p->s);
+    }
     the_selector->Add(this);    
 }
 
 ChatServer::~ChatServer()
 {
+    while(first)
+    {
+        item *tmp = first;
+        first = first->next;
+
+        the_selector->Remove(tmp->s);
+        delete tmp->s;
+        delete tmp;
+    } 
     the_selector->Remove(this);
 }
 
@@ -330,8 +407,13 @@ void ChatServer::Handle(bool re, bool we)
         return;
     }
 
-    current_worker = (current_worker + 1) % 3; 
-    int worker_socket = worker_com_channel[current_worker][SOCKET_PARENT];
+    current_worker = (current_worker + 1) % WORKERS_COUNT; 
+    int i;
+    item *tmp = first;
+    for(i = 0; i < current_worker; i++) 
+        tmp = tmp->next;
+
+    int worker_socket = tmp->s->GetFd();
 
     char dummy = '\0';
     struct iovec io = {
@@ -360,6 +442,10 @@ void ChatServer::Handle(bool re, bool we)
     close(sd);
 }
 
+void ChatServer::ShutDownAllServer()
+{
+    the_selector->BreakLoop();
+}
 
 
 // class WorkerServer
@@ -371,6 +457,7 @@ void WorkerServer::worker_func_main(int my_idx, int socket_channel[WORKERS_COUNT
 
     selector->Run();
 
+    delete selector;
     delete workserv;
 }
 
@@ -552,7 +639,12 @@ void WorkerServer::Handle(bool r, bool w)
     {
         // значит это сообщение
         msg_buffer[res] = '\0'; 
-        SendAllinTheWorkerProcess(msg_buffer);
+        if(strcmp(msg_buffer, "<server command> server shutdown\n") == 0)
+        {
+            the_selector->BreakLoop();
+        }
+        else
+            SendAllinTheWorkerProcess(msg_buffer);
     }
 
     delete[] msg_buffer;    
@@ -579,7 +671,7 @@ void WorkerServer::SendAll(const char *msg, ClientSession *except)
         {
             int res = sendmsg(worker_com_channel[i][SOCKET_PARENT], &hdr, MSG_NOSIGNAL); 
             if(res < 0)
-                perror("sendmsg failed");
+                perror("sendmsg other worker failed");
         }
     }  
 }
@@ -594,3 +686,29 @@ void WorkerServer::SendAllinTheWorkerProcess(const char *msg, ClientSession *exc
     }
 }
 
+void WorkerServer::SendServer(const char *msg)
+{
+    struct iovec io = {
+        .iov_base = (void*)msg,
+        .iov_len = strlen(msg) + 1
+    };
+
+    struct msghdr hdr = {0};
+    hdr.msg_iov = &io;
+    hdr.msg_iovlen = 1;
+    hdr.msg_control = NULL;
+    hdr.msg_controllen = 0;
+    int res = sendmsg(GetFd(), &hdr, MSG_NOSIGNAL);
+    if(res < 0)
+        perror("sendmsg to main process failed");
+}
+
+void WorkerServer::ShutDownAllServer()
+{
+    char *msg = new char[strlen(server_commands) + strlen(server_shutdown) + 3];
+    sprintf(msg, "%s %s\n", server_commands, server_shutdown);
+    SendAll(msg);  
+    SendServer(msg);
+    the_selector->BreakLoop();
+    delete[] msg;
+}

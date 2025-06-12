@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 
 #include "../include/Chat/chat.hpp"
@@ -24,7 +25,7 @@ int main()
         if(socketpair(AF_UNIX, SOCK_STREAM, 0, worker_com_channel[i]) == -1)
         {
             perror("socketpair failed");
-            exit(EXIT_FAILURE);
+            return 1;
         }
     }
     for(i = 0; i < WORKERS_COUNT; i++)
@@ -33,7 +34,7 @@ int main()
         if(worker_pids[i] == -1)
         {
             perror("fork failed");
-            exit(EXIT_FAILURE); 
+            return 1; 
         }
 
         if(worker_pids[i] == 0)
@@ -71,27 +72,10 @@ int main()
     }
     selector->Run();
 
-    for(i = 0; i < 3; i++)
-    {
-        close(worker_com_channel[i][SOCKET_PARENT]);
-        kill(worker_pids[i], SIGTERM);
-    } 
+    int pid_wait;
+    while((pid_wait = wait(NULL)) != -1) {}
+
+    delete server;
+    delete selector;
     return 0;
 }
-
-
-#if 0
-int main()
-{
-    EventSelector *selector = new EventSelector;
-    ChatServer *server = ChatServer::Start(selector, the_server_port);
-    if(!server)
-    {
-        perror("server");
-        return 1;
-    }
-
-    selector->Run();
-    return 0;
-}
-#endif

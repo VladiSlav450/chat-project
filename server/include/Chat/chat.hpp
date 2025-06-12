@@ -17,6 +17,7 @@ static const char entered_msg[] = " has entered the chat";
 static const char left_msg[] = " has left the chat";
 
 static const char server_commands[] = "<server command>";
+static const char server_shutdown[] = "server shutdown";
 
 static const char new_name_msg[] = "enter a new name:";
 static const char invalid_name_msg[] = "Invalid name. The name must be less than 10 characters long"
@@ -56,6 +57,7 @@ class ClientSession : FdHandler
 
     fsm_ClientState current_state;
     bool need_to_delete;
+    bool need_to_shutdown;
 
     ClientSession(WorkerServer *a_master, int fd);
     ~ClientSession();
@@ -79,11 +81,26 @@ class ClientSession : FdHandler
     static char *strdup(const char *str);
 };
 
+class WorkerSession : FdHandler
+{
+    friend class ChatServer;
+    char buffer[max_line_length + 1];
+    ChatServer *the_master;
+
+    WorkerSession(ChatServer *a_master, int fd);
+
+    virtual void Handle(bool re, bool we);
+};
+
 class ChatServer : public FdHandler 
 {
     EventSelector *the_selector;
-    // настроить првильную принятие двойного массива
-    int worker_com_channel[WORKERS_COUNT][STREAMS_COUNT];
+    struct item
+    {
+        WorkerSession *s;
+        item *next;
+    };
+    item *first;
     int current_worker; 
 
     ChatServer(EventSelector *sel, int fd, int worker_pipes[WORKERS_COUNT][STREAMS_COUNT]); 
@@ -91,7 +108,7 @@ public:
     ~ChatServer();
 
     static ChatServer *Start(EventSelector *sel, int port, int worker_pipes_channel[WORKERS_COUNT][STREAMS_COUNT]);
-
+    void ShutDownAllServer();
 private:
     virtual void Handle(bool re, bool we);
 };
@@ -119,6 +136,8 @@ public:
     const char *IsNameUnique(const char *str);
     void SendAll(const char *msg, ClientSession *except = 0);
     void SendAllinTheWorkerProcess(const char *msg, ClientSession *except = 0);
+    void SendServer(const char *msg);
+    void ShutDownAllServer();
 private:
     virtual void Handle(bool r, bool w);
 };
