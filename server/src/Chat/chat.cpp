@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
+#include <errno.h>
 
 
 #include "../../include/Chat/chat.hpp"
@@ -291,7 +292,7 @@ void WorkerSession::Handle(bool re, bool we)
 
     struct iovec io = {
         .iov_base = buffer,
-        .iov_len = sizeof(buffer)
+        .iov_len = sizeof(buffer) - 1
     };
 
     char cmsg_buf[CMSG_SPACE(sizeof(int))];
@@ -303,32 +304,26 @@ void WorkerSession::Handle(bool re, bool we)
     msg.msg_controllen = sizeof(cmsg_buf);
 
 
-    int res = recvmsg(GetFd(), &msg, 0);
+    int res = recvmsg(GetFd(), &msg, MSG_DONTWAIT);
     if(res < 0)
     {
-        perror("recvmsg failed");
+        if(errno != EAGAIN && errno != EWOULDBLOCK)
+            perror("recvmsg WorkerSession::Handle failed");
         return; 
     }
 
-    struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
-
-    // проверям есть ли специальные данные в виде дескриптера
-    if(!cmsg && cmsg->cmsg_level != SOL_SOCKET && cmsg->cmsg_type != SCM_RIGHTS)
+    if(res > 0)
     {
         // значит это сообщение о выключении сервера
         buffer[res] = '\0'; 
         char *strshutdown = new char[strlen(server_commands) + strlen(server_shutdown) + 3];
         sprintf(strshutdown, "%s %s\n", server_commands, server_shutdown);
         if(strncmp(buffer, strshutdown, strlen(strshutdown)) == 0)
-        {
             the_master->ShutDownAllServer();
-        }
         else
             printf("command /shutdown message in WorkerSession failed\n");
         delete[] strshutdown;
     }
-    else
-        printf("recvmsg failed messgae in WorkerSession"); 
 }
 
 // class ChatServer
@@ -362,6 +357,7 @@ ChatServer *ChatServer::Start(EventSelector *sel, int port, int worker_com_chann
 ChatServer::ChatServer(EventSelector *sel, int fd, int worker_channel[WORKERS_COUNT][STREAMS_COUNT]) 
     : FdHandler(fd, true)
     , the_selector(sel)
+    , first(0)
     , current_worker(0)
 {
     int i;
@@ -422,6 +418,8 @@ void ChatServer::Handle(bool re, bool we)
     };
 
     char cmsg_buf[CMSG_SPACE(sizeof(int))];
+    memset(cmsg_buf, 0, sizeof(cmsg_buf));
+
     struct msghdr msg = {0};
     msg.msg_iov = &io;
     msg.msg_iovlen = 1;
@@ -457,8 +455,8 @@ void WorkerServer::worker_func_main(int my_idx, int socket_channel[WORKERS_COUNT
 
     selector->Run();
 
-    delete selector;
     delete workserv;
+    delete selector;
 }
 
 WorkerServer::WorkerServer(EventSelector *sel, int idx, int socket_channel[WORKERS_COUNT][STREAMS_COUNT]) 
@@ -641,6 +639,7 @@ void WorkerServer::Handle(bool r, bool w)
         msg_buffer[res] = '\0'; 
         if(strcmp(msg_buffer, "<server command> server shutdown\n") == 0)
         {
+            SendAllinTheWorkerProcess(msg_buffer);
             the_selector->BreakLoop();
         }
         else
@@ -707,6 +706,7 @@ void WorkerServer::ShutDownAllServer()
 {
     char *msg = new char[strlen(server_commands) + strlen(server_shutdown) + 3];
     sprintf(msg, "%s %s\n", server_commands, server_shutdown);
+
     SendAll(msg);  
     SendServer(msg);
     the_selector->BreakLoop();

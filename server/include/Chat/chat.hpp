@@ -25,7 +25,7 @@ static const char invalid_name_msg[] = "Invalid name. The name must be less than
                                        "Try again:\n";
 static const char name_already_take_msg[] = "Name already take. Choose another.\n";                                       
 
-static const char what_commands_are_there[] =  "available commands: /help /users /name_users /change_name /quit";
+static const char what_commands_are_there[] =  "available commands: /help /users /name_users /change_name /quit /shutdown";
 static const char unknow_command_msg[] = "unknow command. Write /help for commands list."; 
 
 
