@@ -35,9 +35,15 @@ enum {
 };
 
 enum class fsm_ClientState {
-    fsm_NewConnected,
-    fsm_Normal,
-    fsm_ChangeName
+    fsm_UnknowProtocol,
+
+    fsm_HttpHost,
+    fsm_HttpUserAgent,
+    fsm_HttpAccept,
+
+    fsm_ChatProtocolNewConnected,
+    fsm_ChatProtocolNormal,
+    fsm_ChatProtocolChangeName
 };
 
 
@@ -74,6 +80,10 @@ class ClientSession : FdHandler
     void WelcomAndEnteredMsgAndSetName(const char *str);
     void CommandProcessLine(const char *str);
     void SetName(const char *name);
+    void HandleHttp(const char *str);
+    const char *UnknownPath();
+    const char *AllNotFound();
+
     void DisconnectedClient();
 
     const char *ValidateName(const char *name);

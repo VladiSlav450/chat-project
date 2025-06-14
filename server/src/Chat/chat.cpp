@@ -19,11 +19,11 @@ ClientSession::ClientSession(WorkerServer *a_master, int fd)
     , ignoring(false)
     , name(0)
     , the_master(a_master)
-    , current_state(fsm_ClientState::fsm_NewConnected)
+    , current_state(fsm_ClientState::fsm_UnknowProtocol)
     , need_to_delete(false)
     , need_to_shutdown(false)
 {
-    Send("Your name please: "); 
+
 }
 
 ClientSession::~ClientSession()
@@ -125,18 +125,41 @@ void ClientSession::ProcessChatWithMachinState(const char *str)
 {
     switch(current_state)
     {
-        case fsm_ClientState::fsm_NewConnected:
-            if(const char *error = ValidateName(str))
+        case fsm_ClientState::fsm_UnknowProtocol:
+            if(strcmp(str, "CHAT_PROTOCOL") == 0)
             {
-                Send(error);
+                Send("Your name please: "); 
+                current_state = fsm_ClientState::fsm_ChatProtocolNewConnected;
             }
+            else if(strncmp(str, "GET /", 5) == 0)
+            {
+                printf("%s\n", str);
+                HandleHttp(str);
+                current_state = fsm_ClientState::fsm_HttpHost;
+            }
+            break;
+        case fsm_ClientState::fsm_HttpHost:
+            printf("%s\n", str); 
+            current_state = fsm_ClientState::fsm_HttpUserAgent;
+            break;
+        case fsm_ClientState::fsm_HttpUserAgent:
+            printf("%s\n", str); 
+            current_state = fsm_ClientState::fsm_HttpAccept;
+            break;
+        case fsm_ClientState::fsm_HttpAccept:
+            printf("%s\n", str); 
+            need_to_delete = true;
+            break;
+        case fsm_ClientState::fsm_ChatProtocolNewConnected:
+            if(const char *error = ValidateName(str))
+                Send(error);
             else
             {
                 WelcomAndEnteredMsgAndSetName(str);
-                current_state = fsm_ClientState::fsm_Normal;
+                current_state = fsm_ClientState::fsm_ChatProtocolNormal;
             }
             break;
-        case fsm_ClientState::fsm_Normal:
+        case fsm_ClientState::fsm_ChatProtocolNormal:
             if(str[0] == '/')
                 CommandProcessLine(str);
             else
@@ -148,15 +171,13 @@ void ClientSession::ProcessChatWithMachinState(const char *str)
                 delete[] msg;
             }
             break;
-        case fsm_ClientState::fsm_ChangeName:
+        case fsm_ClientState::fsm_ChatProtocolChangeName:
             if(const char *error = ValidateName(str))
-            {
                 Send(error);
-            }
             else
             {
                 SetName(str);
-                current_state = fsm_ClientState::fsm_Normal;
+                current_state = fsm_ClientState::fsm_ChatProtocolNormal;
             }
             break;
     }
@@ -190,7 +211,7 @@ void ClientSession::CommandProcessLine(const char *str)
         buf = new char[serv_com + nl + sizeof(new_name_msg) + 5];
         sprintf(buf, "%s %s, %s\n", server_commands, name, new_name_msg); 
         Send(buf);
-        current_state = fsm_ClientState::fsm_ChangeName; 
+        current_state = fsm_ClientState::fsm_ChatProtocolChangeName; 
     }
     else if(strcmp(str, "/quit") == 0)
     {
@@ -235,6 +256,111 @@ void ClientSession::SetName(const char *str)
     if(name)
         delete[] name;
     name = strdup(str);
+}
+
+void ClientSession::HandleHttp(const char *str)
+{
+    const char *path = str + 5;
+    if(*path == ' ')
+    {        
+        FILE *file = fopen("../lib/_agenda_ru_koi/_TARGET/index.html", "rb");
+        if(file)
+        {
+            printf("\nФайл открылся\n");
+            fseek(file, 0, SEEK_END);
+            long file_size = ftell(file);
+            fseek(file, 0, SEEK_SET);
+            char *file_content = new char[file_size + 1];
+            fread(file_content, 1, file_size, file);
+            fclose(file);
+            
+            const char* head = 
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/html\r\n"
+                "Content-Length: ";
+
+            int count = 0;
+            int tmp = file_size;
+            do
+            {
+                tmp = tmp / 10; 
+                count++;
+            }
+            while(tmp);
+
+            char *response = new char[strlen(head) + count + 5];
+            sprintf(response, "%s%ld\r\n\r\n", head, file_size);
+            Send(response);
+            Send(file_content);
+
+            delete[] file_content;
+            delete[] response; 
+        }
+
+
+        else
+        {
+            FILE *file = fopen("../../lib/_agenda_ru_koi/_TARGET/404.html", "rb");
+            if(file)
+            {
+                fseek(file, 0, SEEK_END);
+                long file_size = ftell(file);
+                fseek(file, 0, SEEK_SET);
+                char *file_content = new char[file_size + 1];
+                fread(file_content, 1, file_size, file);
+                fclose(file);
+
+                const char* head = 
+                    "HTTP/1.1 404 Not Found\r\n"
+                    "Content-Type: text/html\r\n"
+                    "Content-Length: ";
+
+                int count = 0;
+                int tmp = file_size;
+                do
+                {
+                    tmp = tmp / 10; 
+                    count++;
+                }
+                while(tmp);
+
+                char *response = new char[strlen(head) + count + 5];
+                sprintf(response, "%s%ld\r\n\r\n", head, file_size);
+                Send(response);
+                Send(file_content);
+
+                delete[] file_content;
+                delete[] response;
+            }
+            else
+            {
+                printf("\nНе нашди файл %s\n", strerror(errno));
+                // Если даже 404.html не найден
+                Send(AllNotFound());
+            }
+        }
+    }
+    else
+    {
+        printf("\nЭто не начальный путь %s\n", strerror(errno));
+        Send(UnknownPath());
+    }
+}
+
+const char *ClientSession::UnknownPath()
+{
+    return  "HTTP/1.1 404 Not Found\r\n"
+            "Content-Type: text/plain\r\n"
+            "\r\n"
+            "Unknown path!";
+}
+
+const char *ClientSession::AllNotFound()
+{
+    return  "HTTP/1.1 404 Not Found\r\n"
+            "Content-Type: text/plain\r\n"
+            "\r\n"
+            "404 Not Found";
 }
 
 void ClientSession::DisconnectedClient()

@@ -1,0 +1,258 @@
+                               Thalassa CMS
+              ``A G E N D A''   S I T E   T E M P L A T E
+
+
+
+== OVERVIEW
+
+Agenda is a site template for Thalassa CMS.  It provides a site with a main
+page, a feed (either a news feed or a blog, whichever better fits your
+needs) exported to RSS, a contact form and a guestbook; more pages can be
+added to it by the user.  Agenda supports several color schemes (you can
+introduce your own scheme if you want) and allows for other customizations.
+
+Please note that the ``thalassa.ini'' file and the ``base/'' subdirectory
+with all its contents should be considered a part of the template, not
+intended to be customized by the user.  Certainly, they still can be
+altered to fit yor needs, but such alteration may require deep
+understanding of Thalassa (as well as XHTML and CSS) and is generally not
+recommended; if you really understand how Thalassa works, and your
+understanding is deep enough, you might want to create your site from
+scratch, using no templates.  If you use the template, please note that
+editing its basic files can make it too complicated to migrate to future
+versions of the template.
+
+Except these ``thalassa.ini'' and ``base/'', all files in the Agenda
+template root directory are customizable; most of them (with the exception
+for ``config.ini'' and ``feedback.ini'') provide useful defaults for all
+aspects of your site configuration, so you can tune the template to your
+needs step by step.
+
+
+
+== PREPARE THE TEMPLATE
+
+The template needs to be (kind of) put together before you can use it.
+The source files reside under $thalassa/examples/Agenda and
+$thalassa/examples/Common; the trick here is that the Common directory's
+contents is used by other templates as well.  Besides that, the template
+supports different message languages, but only one per copy.  As of
+present, ``en'' (for English), ru_koi (for Russian, koi8-r encoding) and
+ru_utf (for Russian, utf-8 encoding) are supported.
+
+To prepare a fresh copy of the template, change to the $thalassa/examples
+directory and type one of the following commands, as desired:
+
+    make _agenda_en
+    make _agenda_ru_koi
+    make _agenda_ru_utf
+
+Afterwards, be sure to *COPY* the directory you've just made to a location
+outside of the Thalassa source tree.  Don't customize the template right in
+the $thalassa/examples/_agenda_XXX directory, because ``make clean'' issued
+for the Thalassa source tree will simply rm-rf it, wiping out all your
+work.
+
+The rest of the text is written in assumption you do it in your copy
+outside of the Thalassa tree.
+
+
+
+== QUICK START
+
+First of all, *EDIT* THE config.ini FILE!  Some of the parameters
+configured there have no defaults; for instance, if you don't set all the
+required file paths correctly, then your site generation will likely fail.
+The file is self-documented and is relatively short.
+
+Once you're done with your config.ini file, it is strongly recommended
+to try generating the site; to do so, run
+
+    thalassa gen -a
+
+in the root directory of (your modified copy of) the template.  Sometimes a
+more sophisticated command like
+
+    thalassa -c path/to/your/template/copy gen -a
+
+may be useful.
+
+Please note that HTML files generated using the Agenda template refer a lot
+of things (such as the CSS file and service images) by absolute URIs
+(starting with the ``/''), so the whole thing will not work if you just
+point your browser to the local directory with your generation results.  A
+working HTTP server, such as Apache, is required for the generated site to
+work properly.
+
+
+
+== ADDING PAGES
+
+Pages are normally added to your site by creating source files for them
+within the ``db/pages/'' subdirectory.  These files have the ``headed text''
+format, which is described in the Thalassa CMS documentation on a dedicated
+page named ``headed_text.html''.  You can view it online at
+
+    http://thalassa.croco.net/headed_text.html
+
+or locally in the ``doc/'' subdirectory contained within the official
+Thalassa source tarball (just point your browser at it to view the file).
+
+The Agenda template recognizes three page types: ``page'' (the default),
+``story'' and ``feed''; the default ``page'' type is the simplest, it only
+displays the title and the body; ``story'' differs from the ``page'' in
+that it also displays the creation date, and ``feed'' also has a
+navigation panel with arrows for previous/next items of the feed and for
+the position of the current feed item in the feed digest (the ``news'' or
+``blog'' page or page series).
+
+The content generator adds the ``.html'' suffix, so if you add a source
+file named ``foobar'', you'll get a page named ``foobar.html'' right in
+the root directory of your tree.  Please note Agenda is incapable of placing
+pages in subdirectories (well, Thalassa itself lets you build whatever
+directory trees you want, but Agenda is too simple for that).
+
+Initially there are five sample source files, for a page, a story and three
+feed items; viewing them will give you the basic idea on what the files
+should look like.  Feel free to remove the sample files once you don't need
+them anymore.
+
+To add a page or a story, it is sufficient just to add the file and
+rebuild.  To create another item in your feed (be it a blog or a news
+feed), add the source file, be sure to set its type to ``feed'' and add its
+name to the list within the ``pages/_feed'' file.
+
+
+
+
+== ADDING ARBITRARY FILES
+
+Make a subdirectory ``files/'' in your site source directory (the directory
+where the thalassa.ini file resides).  Everything you place in that
+subdirectory (including its own subdirectories, if any, with all their
+content) will be copied into your website tree, under ``files/'' subdir,
+and will be available by ``files/...'' URIs.
+
+Please note that in the present version of the template, hidden files (the
+files with names starting with a dot ``.'') as well as symlinks are ignored
+within the ``files/'' subdirectory.
+
+
+
+== FURTHER CUSTOMIZATION
+
+1. Edit the ``mainmenu.ini'' to modify the main menu of the site to fit
+your needs.
+
+2. Replace the files ``logo.png'' and ``favicon.png'' with your own images.
+Please note that the favicon.png file should contain an image of exactly
+32x32 pixels.  As of the ``logo.png'', it can have any size you want, but
+the Agenda template displays the image having at most 100 pixels at each of
+the two dimensions (well... this size may be changed; see the file
+appearance.ini, the [options dim]/header_height parameter; be sure to set
+the [general]/opt_selector:dim parameter to ``custom''; however, the result
+may look ugly).
+
+3. Edit the ``feedback.ini'' file to set up your contact form.
+
+4. Edit the ``srvtexts.ini'' file to customize the texts shown on various
+static pages of the site; edit the ``cgitexts.ini'' file to customize some
+of the texts that appear on interactive pages.
+
+5. Edit the ``db/pages/premod'' file to customize the premod.html page of
+your site.  Or, if you don't need this page, then remove the file and be
+sure to remove the link to it from the ``srvtexts.ini'' file (see the
+text_premod_note parameter in the file; you might want to make it empty).
+
+6. Edit the ``appearance.ini'' file to choose the color scheme (you might
+want to try all supported schemes, and if you're still not satisfied, make
+a custom one); choose the position of the logo within the header
+(left-side, right-side or no logo at all); choose the position of the side
+panel (again, either left, or right, or no panel); choose whether your feed
+is ``blog'' or ``news''.  Customize some sizes/lengths if you really want
+to; in particular, you might want to change the width of your side panel to
+better fit your main menu items; it's the [options dim]/panel_width:custom
+parameter.  You can also try different comment display styles (the default
+is ``tree'', but there are ``list'' and ``thread'' as well; unfortunately,
+there's no support for multipage ``list'' rendering yet.
+
+7. Once your guestbook attracted a lot of comments, edit the file
+``guestbook.ini'' to change the page with the comments into the ``archive''
+state (either with disabled comments, or with comments kept enabled, on
+your option), and create a new (empty) guestbook page.  The file is
+self-documented.
+
+
+
+== ADVANCED CUSTOMIZATION (EXPERTS ONLY)
+
+If you want to add your own sections to the configuration, please create a
+separate file for that purpose (e.g., local.ini), then edit the config.ini
+file, uncomment the line
+
+  # inifiles =
+
+within the [general] section and add your file name to it, so it becomes
+
+  inifiles = local.ini
+
+Please don't use the thalassa.ini for this purpose.  It is better to keep
+strongly visible the border between the template's implementation and the
+customizing changes you make, e.g., for the case you once want to update
+the version of the template.
+
+
+In case you need to add more CSS rules, e.g., for your own classes or
+objects, then just create a file named ``local.css'' and add all the
+desired CSS code there.  The generator will pick the file's content
+automatically; you can check if everything's okay by viewing the
+(generated) ``style.css'' file found in the root of your web tree.
+
+
+In case you're not satisfied with the .htaccess file the template
+generates, or if you don't need it at all (e.g. if you set all necessary
+options right in your HTTP server's configuration), then edit the
+``htaccess.ini'' file to fit your needs (make the file empty to avoid the
+``.htaccess'' file generation altogether).
+
+
+
+== MANAGING USER PERMISSIONS
+
+The following ``roles'' are defined by the Agenda template:
+
+   * ``admin'' - permitted to do everything the CGI is capable of;
+   * ``moderator'' - permitted to see hidden comments, show and hide
+     comments, remove comments from the premoderation queue, but not
+     delete nor edit comments;
+   * ``poster'' - permitted to post comments without moderator's
+     approvement;
+   * ``superposter'' - permitted to post comments without moderator's
+     approvement and to edit/delete their own comments, including
+     older ones.
+
+In the present version of the Agenda template there's no way to prevent
+anonymous users from posting comments (but only through the premoderation
+queue).  If this is a problem for you, please contact the author; Thalassa
+itself readily allows this, the only problem is to add the appropriate
+option to the template.
+
+Once the user signs up for an account, (s)he automatcally obtains the
+possibility to see his/her own comments, even hidden, and to edit the own
+comments for 30 minutes since the comment is posted.
+
+To grant a user one of the roles mentioned above, go to your CGI user db
+directory (the one specified as [options cgi]/userdbdir in your
+config.ini), change to the ``_users/NNNN'' subdirectory (where NNNN is the
+login name of the user), open the file named ``_data'' in your preferred
+text editor and add a line like
+
+   roles = admin
+
+or
+
+   roles = moderator, superposter
+
+BTW, this is the simplest way to create the ``administrator'' (privileged)
+account for yourself: just register it as an ordinary user through the
+web-interface, then add the ``admin'' role as explained above.
