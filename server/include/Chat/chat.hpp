@@ -12,6 +12,7 @@
 
 #include "../Sockets/sockets.hpp"
 
+// FOR CHAT 
 static const char welcom_msg[] = "Welcom to the Chat! You are known as ";
 static const char entered_msg[] = " has entered the chat";
 static const char left_msg[] = " has left the chat";
@@ -28,6 +29,11 @@ static const char name_already_take_msg[] = "Name already take. Choose another.\
 static const char what_commands_are_there[] =  "available commands: /help /users /name_users /change_name /quit /shutdown";
 static const char unknow_command_msg[] = "unknow command. Write /help for commands list."; 
 
+
+
+// FOR SITE
+static const char INDEX_HTML[] = "../lib/_agenda_ru_koi/_TARGET/index.html";
+static const char NOTFOUND404_HTML[] = "../lib/_agenda_ru_koi/_TARGET/404.html";
 
 enum {
     max_line_length = 1023,
@@ -69,6 +75,7 @@ class ClientSession : FdHandler
     ~ClientSession();
 
     void Send(const char *msg);
+    void Send(int file_fd, off_t file_size);
 
     void ReadAndIgnore();
     void ReadAndCheck();
@@ -80,14 +87,14 @@ class ClientSession : FdHandler
     void WelcomAndEnteredMsgAndSetName(const char *str);
     void CommandProcessLine(const char *str);
     void SetName(const char *name);
+
     void HandleHttp(const char *str);
-    const char *UnknownPath();
-    const char *AllNotFound();
-
+    bool SENDFile(const char *path);
+    void SENDErrorHTML();
+    char *GetMimeType(const char *path);
+    char *Headers(const char *mimetype, int filesize);
     void DisconnectedClient();
-
     const char *ValidateName(const char *name);
-    
     static char *strdup(const char *str);
 };
 

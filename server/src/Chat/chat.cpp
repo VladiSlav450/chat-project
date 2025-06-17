@@ -1,6 +1,7 @@
 // server/src/Chat/chat.cpp
 
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
@@ -8,6 +9,8 @@
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
 #include <errno.h>
 
 
@@ -21,10 +24,7 @@ ClientSession::ClientSession(WorkerServer *a_master, int fd)
     , the_master(a_master)
     , current_state(fsm_ClientState::fsm_UnknowProtocol)
     , need_to_delete(false)
-    , need_to_shutdown(false)
-{
-
-}
+    , need_to_shutdown(false)   {}
 
 ClientSession::~ClientSession()
 {
@@ -35,6 +35,28 @@ ClientSession::~ClientSession()
 void ClientSession::Send(const char *msg)
 {
     write(GetFd(), msg, strlen(msg));    
+}
+
+void ClientSession::Send(int file_fd, off_t file_size)
+{
+    off_t offset = 0;
+    ssize_t sent;
+    int opt = 1;
+    int fd = GetFd();
+
+    if(setsockopt(fd, SOL_SOCKET, TCP_CORK, &opt, sizeof(opt)) < 0) 
+        perror("SetSockOpt TCP_CORK send file: ");
+
+    while(file_size > 0)
+    {
+        sent = sendfile(fd, file_fd, &offset, file_size);
+        if(sent <= 0)
+        {
+            perror("sendfile error");
+            break;
+        }
+        file_size -= sent;
+    } 
 }
 
 void ClientSession::Handle(bool re, bool we)
@@ -147,7 +169,7 @@ void ClientSession::ProcessChatWithMachinState(const char *str)
             current_state = fsm_ClientState::fsm_HttpAccept;
             break;
         case fsm_ClientState::fsm_HttpAccept:
-            printf("%s\n", str); 
+            printf("%s\n---------------------\n", str); 
             need_to_delete = true;
             break;
         case fsm_ClientState::fsm_ChatProtocolNewConnected:
@@ -258,109 +280,111 @@ void ClientSession::SetName(const char *str)
     name = strdup(str);
 }
 
+/*
+   1) addr: / - index.html
+   2) addr: /'любая_хуйняэ' - 404.html
+*/
 void ClientSession::HandleHttp(const char *str)
 {
+    bool current_send = false;
     const char *path = str + 5;
     if(*path == ' ')
-    {        
-        FILE *file = fopen("../lib/_agenda_ru_koi/_TARGET/index.html", "rb");
-        if(file)
+        current_send = SENDFile(INDEX_HTML); 
+    else if(strcmp(path, "AM_JPG") == 0)
+        current_send = SENDFile( "../lib/_agenda_ru_koi/_TARGET/ArsenMarkayn.jpg");
+
+    if(!current_send)
+        if(!SENDFile(NOTFOUND404_HTML))
+            SENDErrorHTML();
+}
+
+bool ClientSession::SENDFile(const char *path)
+{
+    int file_fd = open(path, O_RONLY);
+    if(file < 0)
+    {
+        printf("\nFile open error (%s): %s\n", path, strerror(errno));
+        return false;
+    }
+
+    struct stat file_stat;
+    fstat(file_fd, &file_stat);
+
+    char *mime_type = GetMimeType(path);
+    char *head = Headers(mime_type, file_stat.st_size);
+    delete[] mime_type;
+    Send(head);
+    delete[] head;
+
+    Send(file_fd, file_stat.st_size);
+    close(file_fd);
+    return true;
+}
+
+char *ClientSession::GetMimeType(const char *path)
+{
+    ssize_t i;
+    size_t dot_pos;
+    char *mimetype;
+    for(i = sizeof(path) - 1; i > 0; i--)
+    {
+        if(path[i] == '.')
         {
-            printf("\nФайл открылся\n");
-            fseek(file, 0, SEEK_END);
-            long file_size = ftell(file);
-            fseek(file, 0, SEEK_SET);
-            char *file_content = new char[file_size + 1];
-            fread(file_content, 1, file_size, file);
-            fclose(file);
-            
-            const char* head = 
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/html\r\n"
-                "Content-Length: ";
-
-            int count = 0;
-            int tmp = file_size;
-            do
-            {
-                tmp = tmp / 10; 
-                count++;
-            }
-            while(tmp);
-
-            char *response = new char[strlen(head) + count + 5];
-            sprintf(response, "%s%ld\r\n\r\n", head, file_size);
-            Send(response);
-            Send(file_content);
-
-            delete[] file_content;
-            delete[] response; 
+            dot_size = i;
+            break;
         }
-
-
-        else
-        {
-            FILE *file = fopen("../../lib/_agenda_ru_koi/_TARGET/404.html", "rb");
-            if(file)
-            {
-                fseek(file, 0, SEEK_END);
-                long file_size = ftell(file);
-                fseek(file, 0, SEEK_SET);
-                char *file_content = new char[file_size + 1];
-                fread(file_content, 1, file_size, file);
-                fclose(file);
-
-                const char* head = 
-                    "HTTP/1.1 404 Not Found\r\n"
-                    "Content-Type: text/html\r\n"
-                    "Content-Length: ";
-
-                int count = 0;
-                int tmp = file_size;
-                do
-                {
-                    tmp = tmp / 10; 
-                    count++;
-                }
-                while(tmp);
-
-                char *response = new char[strlen(head) + count + 5];
-                sprintf(response, "%s%ld\r\n\r\n", head, file_size);
-                Send(response);
-                Send(file_content);
-
-                delete[] file_content;
-                delete[] response;
-            }
-            else
-            {
-                printf("\nНе нашди файл %s\n", strerror(errno));
-                // Если даже 404.html не найден
-                Send(AllNotFound());
-            }
-        }
+    }
+    if(strcmp(path[dot_pos], ".html") == 0)
+    {
+        const char txthtml[] = "text/html"; 
+        mimetype = new char[strlen(text/html) + 1];
+        strcpy(mimetype, txthtml); 
+    }
+    else if(strcmp(path[dot_pos] , ".css") == 0)
+    {
+        const char txtcss[] = "text/css"; 
+        mimetype = new char[strlen(txtcss) + 1];
+        strcpy(mimetype, txtcss); 
+    }
+    else if(strcmp(path[dot_pos] , ".jpg") == 0)
+    {
+        const char imgjpg[] = "image/jpeg"; 
+        mimetype = new char[strlen(imgjpg) + 1];
+        strcpy(mimetype, imgjpg); 
     }
     else
+        const char appocst[] = "aplication/octet-stream"; 
+        mimetype = new char[strlen(appocst) + 1];
+        strcpy(mimetype, appocst); 
+    return mimetype;
+}
+
+char *ClientSession::Headers(const char *mime_type, off_t file_size)
+{
+    off_t count = 0;
+    off_t tmp = file_size;
+    do
     {
-        printf("\nЭто не начальный путь %s\n", strerror(errno));
-        Send(UnknownPath());
+        tmp = tmp / 10; 
+        count++;
     }
+    while(tmp);
+    const char begin[] = "HTTP/1.1 200 OK\r\n"
+                         "Content-Type: ";
+    const char middle[] = "Content-Length: ";
+    const char end[] = "Connection: close\r\n"
+                       "\r\n"; 
+    char *response = new char[strlen(begin) + strlen(middle) + strlen(mimetype) + strlen(end) + count + 5];
+    sprintf(response, "%s%s\r\n%s%ld\r\n%s", begin, mime_type, middle, file_size, end);
+    return response;
 }
 
-const char *ClientSession::UnknownPath()
+void ClientSession::SENDErrorHTML()
 {
-    return  "HTTP/1.1 404 Not Found\r\n"
-            "Content-Type: text/plain\r\n"
-            "\r\n"
-            "Unknown path!";
-}
-
-const char *ClientSession::AllNotFound()
-{
-    return  "HTTP/1.1 404 Not Found\r\n"
-            "Content-Type: text/plain\r\n"
-            "\r\n"
-            "404 Not Found";
+    Send("HTTP/1.1 404 Not Found\r\n"
+         "Content-Type: text/plain\r\n"
+         "\r\n"
+         "404 Not Found");
 }
 
 void ClientSession::DisconnectedClient()
