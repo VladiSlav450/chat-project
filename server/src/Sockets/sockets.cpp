@@ -4,7 +4,6 @@
 #include <sys/select.h>
 #include <unistd.h>
 
-
 #include <stdio.h>
 
 #include "../../include/Sockets/sockets.hpp"

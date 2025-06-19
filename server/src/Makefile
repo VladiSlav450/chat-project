@@ -1,9 +1,15 @@
 CXX = g++
 CXXFLAGS = -g -Wall -O2
 
-TARGET = server_chat
+TARGET = server
 
-SRCS = main.o Sockets/sockets.cpp Chat/chat.cpp
+SRCS = main.cpp \
+	   Sockets/sockets.cpp \
+	   Processes/ServerProcess.cpp \
+	   Processes/WorkerProcess.cpp \
+	   Sessions/ClientSession.cpp \
+	   Sessions/WorkerSession.cpp
+
 OBJS = $(SRCS:.cpp=.o)
 
 $(TARGET): $(OBJS)

@@ -3,6 +3,9 @@
 #ifndef MYALGORITMICS_HPP
 #define MYALGORITMICS_HPP
 
+#include <string.h>
+#include <sys/types.h>
+
 /*  Cheking_if_a_port_value_is_valid function - gets the string by the index
  *  Parameters:
  *  port - pointer to the string (can be NULL)
@@ -26,16 +29,38 @@ ssize_t Checking_if_a_port_value_is_valid(const char *port);
 
 bool Checking_the_validity_of_the_IP_value(const char *ip);
 
+
+/*
+ * hash table 
+ * key - const char *
+ * value - const cahr * 
+ */
+
+class HashTableStrings
+{
+    struct Item 
+    {
+        char *index;
+        char *value;
+        Item *next;
+    };
+    Item *first;
+    int defval;
+    int size;
+public:
+    HashTableStrings(const char &str) : first(0), defval(0), size(0) {}
+};
+
 /* 
  *  class SparseArray
  */
 
-template<class T>
+template<class Key, class T>
 class SparseArray
 {
     struct Item
     {
-        int index;
+        Key index;
         T value;
         Item *next;
     };
@@ -48,13 +73,13 @@ public:
 
     class Interm
     {
-        friend class SparseArray<T>;
+        friend class SparseArray<Key, T>;
 
-        SparseArray<T> *master;
-        int index;
+        SparseArray<Key, T> *master;
+        Key key;
 
-        Interm(SparseArray<T> *a_master, int ind)
-            : master(a_master), index(ind) {}
+        Interm(SparseArray<Key, T> *a_master, Key k)
+            : master(a_master), key(k) {}
 
         T& Provide();
         void Remove();
@@ -66,22 +91,22 @@ public:
 
     friend class Interm;
 
-    Interm operator[](int idx)
-        { return Interm(this, idx); }
+    Interm operator[](Key k)
+        { return Interm(this, k); }
 
-    T operator[](int idx) const;
+    T operator[](Key k) const;
 
     int NonzeroCount() const { return size; }
 
 private:
-    SparseArray(const SparseArray<T>&) {}
-    void operator=(const SparseArray<T>&) {}
+    SparseArray(const SparseArray<Key, T>&) {}
+    void operator=(const SparseArray<Key, T>&) {}
 };
 
 
 // methods class SparseArray
-template <class T>
-SparseArray<T>::~SparseArray()
+template <class Key, class T>
+SparseArray<Key, T>::~SparseArray()
 {
     while(first)
     {
@@ -91,42 +116,42 @@ SparseArray<T>::~SparseArray()
     }
 }
 
-template <class T>
-T SparseArray<T>::operator[](int idx) const 
+template <class Key, class T>
+T SparseArray<Key, T>::operator[](Key k) const 
 {
     Item *tmp;
     for(tmp = first; tmp; tmp = tmp->next)
     {
-        if(tmp->index == idx)
+        if(tmp->key == k)
             return tmp->value;
     }
     return defval;
 }
 
 // class SparseArray::Interm
-template <class T>
-T& SparseArray<T>::Interm::Provide()
+template <class Key, class T>
+T& SparseArray<Key, T>::Interm::Provide()
 {
     Item *tmp;
     for(tmp = master->first; tmp; tmp = tmp->next)
-        if(tmp->index == index)
+        if(tmp->key == key)
             return tmp->value;
 
     tmp = new Item;
-    tmp->index = index;
+    tmp->key = key;
     tmp->next = master->first;
     master->first = tmp;
     master->size++;
     return tmp->value;
 }
 
-template <class T>
+template <class Key, class T>
 void SparseArray<T>::Interm::Remove()
 {
     Item **tmp;
     for(tmp = &(master->first); *tmp; tmp = &(*tmp)->next)
     {
-        if((*tmp)->index == index)
+        if((*tmp)->key == key)
         {
             Item *delete_to = *tmp;
             *tmp = (*tmp)->next;
@@ -137,18 +162,18 @@ void SparseArray<T>::Interm::Remove()
     }
 }
 
-template <class T>
+template <class Key, class T>
 SparseArray<T>::Interm::operator T()
 {
     Item *tmp;
     for(tmp = master->first; tmp; tmp = tmp->next)
-        if(tmp->index == index)
+        if(tmp->key == key)
             return tmp->value;
 
     return master->defval;
 }
 
-template <class T>
+template <class Key, class T>
 T SparseArray<T>::Interm::operator=(const T &x)
 {
     if(x == master->defval)
@@ -157,5 +182,23 @@ T SparseArray<T>::Interm::operator=(const T &x)
         Provide() = x;
     return x;
 }
+
+// class String
+
+class String
+{
+    char *data;
+public:
+    String(const char *str)
+    {
+        data = new char[strlen(str) + 1];
+        strcpy(data, str);
+    }
+    ~Stirng() { delete[] data; }
+    bool operator==(const String& other) const { return strcmp(data, other.data) == 0; }
+private:
+    String(const String&) {}
+    void operator=(const Strong&) {}
+};
 
 #endif // MYALGORITMICS_HPP

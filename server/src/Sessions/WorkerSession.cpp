@@ -1,23 +1,17 @@
-// server/src/Chat/chat.cpp
+// server/src/Sessions/WorkerSession.cpp
 
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <errno.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
-#include <sys/sendfile.h>
-#include <sys/stat.h>
-#include <errno.h>
 
 
-#include "../../include/Chat/chat.hpp"
+#include "../../include/Sessions/WorkerSession.hpp"
 
 // class WorkerSession
-WorkerSession::WorkerSession(ChatServer *a_master, int fd) 
+
+WorkerSession::WorkerSession(Server *a_master, int fd) 
     : FdHandler(fd, true)
     , the_master(a_master) 
 {}

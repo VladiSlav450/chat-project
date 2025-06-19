@@ -9,8 +9,11 @@
 #include <sys/wait.h>
 
 
-#include "../include/Chat/chat.hpp"
+#include "../include/Processes/ServerProcess.hpp"
+#include "../include/Processes/WorkerProcess.hpp"
+#include "../include/ConstantsAndVaribles.hpp"
 #include "../include/Sockets/sockets.hpp"
+
 
 static int the_server_port = 7777;
 
@@ -64,7 +67,7 @@ int main()
     }
 
     EventSelector *selector = new EventSelector;
-    ChatServer *server = ChatServer::Start(selector, the_server_port, worker_com_channel);
+    Server *server = Server::Start(selector, the_server_port, worker_com_channel);
     if(!server)
     {
         perror("server start failed");

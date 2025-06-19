@@ -9,7 +9,7 @@ class FdHandler;
 
 class EventSelector
 {
-    SparseArray<FdHandler*> fd_array;
+    SparseArray<int, FdHandler*> fd_array;
     struct Key_Array
     {
         int value;
