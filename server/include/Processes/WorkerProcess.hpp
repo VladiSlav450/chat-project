@@ -8,6 +8,7 @@
 #include "../ConstantsAndVaribles.hpp"
 
 class ClientSession;
+class RouteConfigFile;
 
 class WorkerServer : public FdHandler
 {
@@ -23,10 +24,10 @@ class WorkerServer : public FdHandler
     int my_index;
     int worker_com_channel[WORKERS_COUNT][STREAMS_COUNT];
 public:
-    WorkerServer(EventSelector *sel, int idx, int channel[WORKERS_COUNT][STREAMS_COUNT], RouteConfig *config);
+    WorkerServer(EventSelector *sel, int idx, int channel[WORKERS_COUNT][STREAMS_COUNT], RouteConfigFile *config);
     ~WorkerServer();
 
-    static void worker_func_main(int my_idx, int socket_channel[WORKERS_COUNT][STREAMS_COUNT]);
+    static void worker_func_main(int my_idx, int socket_channel[WORKERS_COUNT][STREAMS_COUNT], const char *path_config);
 
     void RemoveSession(ClientSession *s);
     char *GetNumberUsersOnline();
@@ -41,16 +42,17 @@ private:
     virtual void Handle(bool r, bool w);
 };
 
-class RouteConfigFile : FdHandler
+class RouteConfigFile
 {
-    SparseArray<String, String> *routes;
+    SparseArray<MyStr, MyStr> routes;
     const char *config_path;
+    MyStr standart_key_404path;
     time_t last_mod_time;
 public:
     RouteConfigFile(const char *path);
     ~RouteConfigFile();
     void ReloadConfig();
-
+    char *SerchPath(const char *request_path);
 };
 
 #endif // WORKERPROCESS_HPP

@@ -1,9 +1,11 @@
 // server/src/Processes/WorkerProcess.cpp
 
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 
 #include "../../include/Sockets/sockets.hpp"
@@ -14,7 +16,7 @@
 void WorkerServer::worker_func_main(int my_idx, int socket_channel[WORKERS_COUNT][STREAMS_COUNT], const char *path_config)
 {
     EventSelector *selector = new EventSelector;  
-    RouteConfigFile *config = new RouteConfigeFile(path_config);
+    RouteConfigFile *config = new RouteConfigFile(path_config);
     WorkerServer *workserv = new WorkerServer(selector, my_idx, socket_channel, config);
 
     selector->Run();
@@ -287,7 +289,94 @@ char *WorkerServer::FindPathForSendFile(const char *path)
         return 0;
     }
         
-    return configfile->Resolve(path);
+    return configfile->SerchPath(path);
 }
 
+// class RouteConfigFile
 
+RouteConfigFile::RouteConfigFile(const char *path)
+    : routes(MyStr(""))
+    , config_path(path)
+    , standart_key_404path("404")
+{
+    ReloadConfig();
+}
+
+RouteConfigFile::~RouteConfigFile() {}
+
+void RouteConfigFile::ReloadConfig()
+{
+    FILE *file = fopen(config_path, "r");
+    if(!file)
+    {
+        printf("Fopen failed in func RouteConfigFile (%s) %s)", config_path, strerror(errno));
+        return; 
+    }
+
+    char line[512];
+    while(fgets(line, sizeof(line), file))
+    {
+        if(line[0] == '#' || line[0] == '\n')
+            continue;
+
+        char *eq = strchr(line, '=');
+        if(!eq)
+            continue;
+
+        *eq = 0; 
+        char *key_begin = line;
+        while(*key_begin == ' ')
+            key_begin++;
+        char *key_end = eq - 1;
+        while(key_end > key_begin && *key_end == ' ')
+        {
+            *key_end = 0;
+            key_end--;
+        }
+
+        char *value_begin = eq + 1;
+        while(*value_begin == ' ')
+            value_begin++;
+        char *value_end = value_begin + strlen(value_begin) - 1;
+        if(value_end > value_begin && (*value_end == ' ' || *value_end == '\n'))
+        {
+            *value_end = 0;
+            value_end--;
+        }
+
+        routes[MyStr(key_begin)] = MyStr(value_begin);
+    }
+    fclose(file);
+    struct stat st;
+    if(stat(config_path, &st) == 0)
+        last_mod_time = st.st_mtime;
+}
+
+char *RouteConfigFile::SerchPath(const char *request_path)
+{
+    struct stat st;
+    int res = stat(config_path, &st);
+    if(res < 0)
+    {
+        printf("Stat failed (%s) %s\n", request_path, strerror(errno));
+        return 0;
+    }
+    if(st.st_mtime > last_mod_time)
+    {
+        ReloadConfig();
+    }
+
+    MyStr key(request_path);
+    MyStr result = routes[key];
+    
+    if(result.str()[0] == '\0')
+    {
+        printf("Serch Filed path RouteConfigFile::SerchPath(const char *)\n"
+               "result: [%s], key: [%s]\n", result.str(), key.str());
+        result = routes[standart_key_404path];
+        if(result.str()[0] == '\0')
+            return 0;
+    }
+
+    return strdup(result.str());
+}

@@ -8,7 +8,8 @@ SRCS = main.cpp \
 	   Processes/ServerProcess.cpp \
 	   Processes/WorkerProcess.cpp \
 	   Sessions/ClientSession.cpp \
-	   Sessions/WorkerSession.cpp
+	   Sessions/WorkerSession.cpp \
+	   myAlgorithms/myAlgorithms.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 

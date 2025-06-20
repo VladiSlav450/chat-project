@@ -19,7 +19,6 @@ class WorkerSession : FdHandler
     virtual void Handle(bool re, bool we);
 };
 
-
 #endif // WORKERSESSION_HPP
 
 

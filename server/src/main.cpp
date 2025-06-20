@@ -54,8 +54,7 @@ int main()
                     worker_com_channel[j][SOCKET_CHILD] = -1;
                 }
             }
-
-            WorkerServer::worker_func_main(i, worker_com_channel); 
+            WorkerServer::worker_func_main(i, worker_com_channel, PATHCONFIGFILE); 
             exit(0);
         }
     }
@@ -65,7 +64,6 @@ int main()
         close(worker_com_channel[i][SOCKET_CHILD]);
         worker_com_channel[i][SOCKET_CHILD] = -1;
     }
-
     EventSelector *selector = new EventSelector;
     Server *server = Server::Start(selector, the_server_port, worker_com_channel);
     if(!server)
@@ -77,7 +75,6 @@ int main()
 
     int pid_wait;
     while((pid_wait = wait(NULL)) != -1) {}
-
     delete server;
     delete selector;
     return 0;

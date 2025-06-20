@@ -1,5 +1,6 @@
 // server/src/Sessions/ClientSession.cpp
 
+#include <stdlib.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -163,7 +164,7 @@ void ClientSession::ProcessChatWithMachinState(const char *str)
             else if(strncmp(str, "GET /", 5) == 0)
             {
                 printf("%s\n", str);
-                HandleHttp(str);
+                HandleHttp(str + 4);
                 current_state = fsm_ClientState::fsm_HttpHost;
             }
             break;
@@ -293,11 +294,24 @@ void ClientSession::SetName(const char *str)
 */
 void ClientSession::HandleHttp(const char *str)
 {
-    bool current_send = false;
-    const char *path = str + 4;
-     
-    if(!SENDFile(the_matster->FindPathForSendFile(path)));
+    char path[max_line_length + 1];
+    int i;
+    for(i = 0; str[i] != ' '; i++)
+        path[i] = str[i];
+    path[i] = 0;
+
+    char *file_path = the_master->FindPathForSendFile(path);
+    if(file_path)
+    {
+        if(!SENDFile(file_path))
+            SENDErrorHTML();
+        free(file_path);
+    }
+    else
+    {
+        printf("Path file filed ClientSession\n");
         SENDErrorHTML();
+    }
 }
 
 bool ClientSession::SENDFile(const char *path)
@@ -308,14 +322,11 @@ bool ClientSession::SENDFile(const char *path)
         printf("\nFile open error (%s): %s\n", path, strerror(errno));
         return false;
     }
-
     struct stat file_stat;
     fstat(file_fd, &file_stat);
 
     char *mime_type = GetMimeType(path);
-    printf("mime type: %s\n", mime_type);
     char *head = Headers(mime_type, file_stat.st_size);
-    printf("Send Head: %s\n", head);
     Send(head);
 
     delete[] mime_type;
@@ -442,4 +453,3 @@ char *ClientSession::strdup(const char *str)
     strcpy(result, str);
     return result;
 }
-

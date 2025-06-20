@@ -10,6 +10,11 @@
 #define SOCKET_PARENT 0
 #define SOCKET_CHILD 1
 
+enum {
+    max_line_length = 1023,
+    qlen_for_listen = 16
+};
+
 // FOR CHAT 
 
 static const char welcom_msg[] = "Welcom to the Chat! You are known as ";
@@ -29,15 +34,8 @@ static const char what_commands_are_there[] =  "available commands: /help /users
 static const char unknow_command_msg[] = "unknow command. Write /help for commands list."; 
 
 
-
 // FOR SITE
       
-static const char INDEX_HTML[] = "../lib/_agenda_ru_koi/_TARGET/index.html";
-static const char NOTFOUND404_HTML[] = "../lib/_agenda_ru_koi/_TARGET/404.html";
-
-enum {
-    max_line_length = 1023,
-    qlen_for_listen = 16
-};
+static const char PATHCONFIGFILE[] = "../lib/config.conf";
 
 #endif // CONSTANTSANDVARIBLES_HPP

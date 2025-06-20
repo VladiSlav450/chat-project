@@ -29,28 +29,6 @@ ssize_t Checking_if_a_port_value_is_valid(const char *port);
 
 bool Checking_the_validity_of_the_IP_value(const char *ip);
 
-
-/*
- * hash table 
- * key - const char *
- * value - const cahr * 
- */
-
-class HashTableStrings
-{
-    struct Item 
-    {
-        char *index;
-        char *value;
-        Item *next;
-    };
-    Item *first;
-    int defval;
-    int size;
-public:
-    HashTableStrings(const char &str) : first(0), defval(0), size(0) {}
-};
-
 /* 
  *  class SparseArray
  */
@@ -60,7 +38,7 @@ class SparseArray
 {
     struct Item
     {
-        Key index;
+        Key key;
         T value;
         Item *next;
     };
@@ -68,7 +46,7 @@ class SparseArray
     T defval;
     int size;
 public:
-    SparseArray(const T &dv) : first(0), defval(dv), size(0) {}
+    SparseArray(const T &dv) : first(0), defval(dv), size(0) {} 
     ~SparseArray();
 
     class Interm
@@ -94,7 +72,7 @@ public:
     Interm operator[](Key k)
         { return Interm(this, k); }
 
-    T operator[](Key k) const;
+    T& operator[](const Key &k) const;
 
     int NonzeroCount() const { return size; }
 
@@ -117,7 +95,7 @@ SparseArray<Key, T>::~SparseArray()
 }
 
 template <class Key, class T>
-T SparseArray<Key, T>::operator[](Key k) const 
+T& SparseArray<Key, T>::operator[](const Key& k) const 
 {
     Item *tmp;
     for(tmp = first; tmp; tmp = tmp->next)
@@ -146,7 +124,7 @@ T& SparseArray<Key, T>::Interm::Provide()
 }
 
 template <class Key, class T>
-void SparseArray<T>::Interm::Remove()
+void SparseArray<Key, T>::Interm::Remove()
 {
     Item **tmp;
     for(tmp = &(master->first); *tmp; tmp = &(*tmp)->next)
@@ -163,7 +141,7 @@ void SparseArray<T>::Interm::Remove()
 }
 
 template <class Key, class T>
-SparseArray<T>::Interm::operator T()
+SparseArray<Key, T>::Interm::operator T()
 {
     Item *tmp;
     for(tmp = master->first; tmp; tmp = tmp->next)
@@ -174,7 +152,7 @@ SparseArray<T>::Interm::operator T()
 }
 
 template <class Key, class T>
-T SparseArray<T>::Interm::operator=(const T &x)
+T SparseArray<Key, T>::Interm::operator=(const T &x)
 {
     if(x == master->defval)
         Remove();
@@ -183,22 +161,22 @@ T SparseArray<T>::Interm::operator=(const T &x)
     return x;
 }
 
-// class String
+// class MyStr
 
-class String
+class MyStr
 {
-    char *data;
+    char *p;
 public:
-    String(const char *str)
-    {
-        data = new char[strlen(str) + 1];
-        strcpy(data, str);
-    }
-    ~Stirng() { delete[] data; }
-    bool operator==(const String& other) const { return strcmp(data, other.data) == 0; }
-private:
-    String(const String&) {}
-    void operator=(const Strong&) {}
+    MyStr();
+    MyStr(const char *str);
+    MyStr(const MyStr& other);  
+    ~MyStr() 
+        { delete[] p; }
+    bool operator==(const MyStr& other) const 
+        { return strcmp(p, other.str()) == 0; }
+    MyStr& operator=(const MyStr& other); 
+    const char *str() const 
+        { return p; }
 };
 
 #endif // MYALGORITMICS_HPP
